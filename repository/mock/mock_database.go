@@ -9,38 +9,31 @@ import (
 )
 
 type MockDatabase struct {
-	MockPlatformTcbRepository MockPlatformTcbRepository
-	MockPckCrlRepository MockPckCrlRepository
-        MockPckCertRepository MockPckCertRepository
-	MockPckCertChainRepository MockPckCertChainRepository
-	MockFmspcTcbInfoRepository MockFmspcTcbInfoRepository
-	MockQEIdentityRepository MockQEIdentityRepository
+	MockHostRepository                    MockHostRepository
+	MockTenantRepository                  MockTenantRepository
+	MockHostTenantMappingRepository       MockHostTenantMappingRepository
+	MockTenantPluginCredentialRepository  MockTenantPluginCredentialRepository
 }
 
 func (m *MockDatabase) Migrate() error {
 	return nil
 }
 
-func (m *MockDatabase) PlatformTcbRepository() repository.PlatformTcbRepository {
-	return &m.MockPlatformTcbRepository
+func (m *MockDatabase) HostRepository() repository.HostRepository {
+	return &m.MockHostRepository
 }
 
-func (m *MockDatabase) PckCrlRepository() repository.PckCrlRepository {
-	return &m.MockPckCrlRepository
+func (m *MockDatabase) TenantRepository() repository.TenantRepository {
+	return &m.MockTenantRepository
 }
-func (m *MockDatabase) PckCertRepository() repository.PckCertRepository {
-	return &m.MockPckCertRepository
+
+func (m *MockDatabase) HostTenantMappingRepository() repository.HostTenantMappingRepository {
+	return &m.MockHostTenantMappingRepository
 }
-func (m *MockDatabase) PckCertChainRepository() repository.PckCertChainRepository {
-	return &m.MockPckCertChainRepository
-}
-func (m *MockDatabase) FmspcTcbInfoRepository() repository.FmspcTcbInfoRepository {
-	return &m.MockFmspcTcbInfoRepository
-}
-func (m *MockDatabase) QEIdentityRepository() repository.QEIdentityRepository {
-	return &m.MockQEIdentityRepository
+
+func (m *MockDatabase) TenantPluginCredentialRepository() repository.TenantPluginCredentialRepository {
+	return &m.MockTenantPluginCredentialRepository
 }
 
 func (m *MockDatabase) Close() {
-
 }

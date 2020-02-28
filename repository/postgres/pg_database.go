@@ -54,38 +54,27 @@ func (pd *PostgresDatabase) Migrate() error {
 	log.Trace("repository/postgres/pg_database: Migrate() Entering")
 	defer log.Trace("repository/postgres/pg_database: Migrate() Leaving")
 
-	pd.DB.AutoMigrate(types.PlatformTcb{})
-	pd.DB.AutoMigrate(types.PckCertChain{})
-	pd.DB.AutoMigrate(types.PckCert{}).AddForeignKey("cert_chain_id", "pck_cert_chains(id)", "RESTRICT", "RESTRICT")
-	pd.DB.AutoMigrate(types.PckCrl{})
-	pd.DB.AutoMigrate(types.FmspcTcbInfo{})
-	pd.DB.AutoMigrate(types.QEIdentity{})
+	pd.DB.AutoMigrate(types.Host{})
+	pd.DB.AutoMigrate(types.Tenant{})
+	pd.DB.AutoMigrate(types.HostTenantMapping{}).AddForeignKey("tenant_uuid", "tenants(id)", "RESTRICT", "RESTRICT")
+	pd.DB.AutoMigrate(types.TenantPluginCredential{}).AddForeignKey("tenant_uuid", "tenants(id)", "RESTRICT", "RESTRICT")
 	return nil
 }
 
-func (pd *PostgresDatabase) PlatformTcbRepository() repository.PlatformTcbRepository {
-	return &PostgresPlatformTcbRepository{db: pd.DB}
+func (pd *PostgresDatabase) HostRepository() repository.HostRepository {
+	return &PostgresHostRepository{db: pd.DB}
 }
 
-func (pd *PostgresDatabase) FmspcTcbInfoRepository() repository.FmspcTcbInfoRepository {
-	return &PostgresFmspcTcbInfoRepository{db: pd.DB}
+func (pd *PostgresDatabase) TenantRepository() repository.TenantRepository {
+	return &PostgresTenantRepository{db: pd.DB}
 }
-func (pd *PostgresDatabase) PckCertChainRepository() repository.PckCertChainRepository {
-	return &PostgresPckCertChainRepository{db: pd.DB}
-}
-
-func (pd *PostgresDatabase) PckCertRepository() repository.PckCertRepository {
-	return &PostgresPckCertRepository{db: pd.DB}
+func (pd *PostgresDatabase) HostTenantMappingRepository() repository.HostTenantMappingRepository {
+	return &PostgresHostTenantMappingRepository{db: pd.DB}
 }
 
-func (pd *PostgresDatabase) PckCrlRepository() repository.PckCrlRepository {
-	return &PostgresPckCrlRepository{db: pd.DB}
+func (pd *PostgresDatabase) TenantPluginCredentialRepository() repository.TenantPluginCredentialRepository {
+	return &PostgresTenantPluginCredentialRepository{db: pd.DB}
 }
-
-func (pd *PostgresDatabase) QEIdentityRepository() repository.QEIdentityRepository {
-	return &PostgresQEIdentityRepository{db: pd.DB}
-}
-
 
 func (pd *PostgresDatabase) Close() {
 	if pd.DB != nil {

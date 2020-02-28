@@ -6,11 +6,9 @@ package repository
 
 type SAHDatabase interface {
 	Migrate() error
-	PlatformTcbRepository() PlatformTcbRepository
-	PckCertChainRepository() PckCertChainRepository
-	PckCertRepository() PckCertRepository
-	PckCrlRepository() PckCrlRepository
-	FmspcTcbInfoRepository() FmspcTcbInfoRepository
-	QEIdentityRepository() QEIdentityRepository
+	HostRepository() HostRepository
+	TenantRepository() TenantRepository
+	HostTenantMappingRepository() HostTenantMappingRepository
+	TenantPluginCredentialRepository() TenantPluginCredentialRepository
 	Close()
 }

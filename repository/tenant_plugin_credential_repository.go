@@ -1,0 +1,15 @@
+/*
+ * Copyright (C) 2019 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+package repository
+
+import "intel/isecl/sgx-attestation-hub/types"
+
+type TenantPluginCredentialRepository interface {
+	Create(types.TenantPluginCredential) (*types.TenantPluginCredential, error)
+	Retrieve(types.TenantPluginCredential) (*types.TenantPluginCredential, error)
+	RetrieveAll(types.TenantPluginCredential) (types.TenantPluginCredentials, error)
+	Update(types.TenantPluginCredential) error
+	Delete(types.TenantPluginCredential) error
+}
