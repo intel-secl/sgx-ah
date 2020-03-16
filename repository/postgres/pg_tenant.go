@@ -42,7 +42,7 @@ func (r *PostgresTenantRepository) Retrieve(t types.Tenant) (*types.Tenant, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): failed to retrieve Tenant")
 	}
-	return &t, nil
+	return &s, nil
 }
 
 func (r *PostgresTenantRepository) RetrieveAll(t types.Tenant) (types.Tenants, error) {

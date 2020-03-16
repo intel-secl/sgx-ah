@@ -42,7 +42,7 @@ func (r *PostgresHostTenantMappingRepository) Retrieve(m types.HostTenantMapping
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): failed to Retrieve Host Tenant Mapping")
 	}
-	return &m, nil
+	return &p, nil
 }
 
 func (r *PostgresHostTenantMappingRepository) RetrieveAll(m types.HostTenantMapping) (types.HostTenantMappings, error) {

@@ -42,7 +42,7 @@ func (r *PostgresHostRepository) Retrieve(h types.Host) (*types.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): failed to retrieve Host")
 	}
-	return &h, nil
+	return &p, nil
 }
 
 
