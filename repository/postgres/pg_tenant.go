@@ -7,7 +7,7 @@ package postgres
 import (
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
-	
+
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 )
@@ -57,6 +57,19 @@ func (r *PostgresTenantRepository) RetrieveAll(t types.Tenant) (types.Tenants, e
 	return ts, nil
 }
 
+func (r *PostgresTenantRepository) RetrieveAllActiveTenants() (types.Tenants, error) {
+	log.Trace("repository/postgres/pg_tenant: RetrieveAll() Entering")
+	defer log.Trace("repository/postgres/pg_tenant: RetrieveAll() Leaving")
+
+	var ts types.Tenants
+	err := r.db.Where("deleted = false").Find(&ts).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "RetrieveAll(): failed to retrieve all Tenants")
+	}
+	slog.WithField("db qes", ts).Trace("RetrieveAll")
+	return ts, nil
+}
+
 func (r *PostgresTenantRepository) Update(t types.Tenant) error {
 	log.Trace("repository/postgres/pg_tenant: Update() Entering")
 	defer log.Trace("repository/postgres/pg_tenant: Update() Leaving")
@@ -76,4 +89,3 @@ func (r *PostgresTenantRepository) Delete(t types.Tenant) error {
 	}
 	return nil
 }
-

@@ -1,0 +1,182 @@
+/*
+ * Copyright (C) 2019 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+package resource
+
+import (
+	"encoding/json"
+	//"fmt"
+	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/sgx-attestation-hub/repository"
+	"intel/isecl/sgx-attestation-hub/types"
+	//"net/http"
+	"github.com/pkg/errors"
+
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
+
+	"io/ioutil"
+)
+
+type Plugin struct {
+	key   string `json:"key"`
+	value string `json:"value"`
+}
+
+type config struct {
+	TenantName string   `json:"name"`
+	Plugins    []Plugin `json:"plugins"`
+}
+
+type hostDetails struct {
+	uuid                string
+	hardwareUuid        string
+	trust_report        string
+	hostname            string
+	signed_trust_report string
+}
+
+type platformData struct {
+	sgx_enabled   bool   `json:"sgx-enabled"`
+	sgx_supported bool   `json:"sgx-supported"`
+	flc_enabled   bool   `json:"flc-enabled"`
+	tcbUpToDate   bool   `json:"tcbUpToDate"`
+	epc_size      string `json:"epc-size"`
+}
+
+func (e *config) GetConfigStruct(configuartion string) error {
+
+	log.Info("resource/sgx_plugin:GetConfigStruct() Entering")
+	defer log.Trace("resource/sgx_plugin:GetConfigStruct() Leaving")
+	if err := json.Unmarshal(([]byte(configuartion)), &e); err != nil {
+		log.Info("trace shef 1")
+		return errors.Wrap(err, "configuration Unmarshal Failed")
+	}
+	log.Info("trace shef 2")
+	return nil
+}
+
+func createSignedTrustReport(createSignedTrustReport string) (string, error) {
+	///Get the privateKeyFromPath
+	var privateKey *rsa.PrivateKey
+	rsaPrivateKeyLocation := constants.PrivatekeyLocation
+
+	log.Info("rsaPrivateKeyLocation: ", rsaPrivateKeyLocation)
+	priv, err := ioutil.ReadFile(rsaPrivateKeyLocation)
+	log.Info("priv: ", priv)
+	if err != nil {
+		log.Error("No RSA private key found: ", err)
+		return "", errors.New("No RSA Key file path provided")
+	}
+	privPem, _ := pem.Decode(priv)
+	log.Info("privPem: ", privPem)
+	parsedKey, err := x509.ParsePKCS8PrivateKey(privPem.Bytes)
+	if err != nil {
+		log.Error("Cannot parse RSA private key from file: ", err)
+		return "", errors.New("Cannot parse RSA private key from file")
+	}
+	privateKey, ok := parsedKey.(*rsa.PrivateKey)
+	if !ok {
+		log.Error("Unable to parse RSA private key")
+		return "", errors.New("Unable to parse RSA private key")
+	}
+	hashEntity := sha512.New384()
+	hashEntity.Write([]byte(createSignedTrustReport))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA384, hashEntity.Sum(nil))
+	signatureString := base64.StdEncoding.EncodeToString(signature)
+	return signatureString, nil
+}
+
+func SynchAttestationInfo(db repository.SAHDatabase) error {
+	log.Info("Calling out plugins to push host data")
+	log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Entering")
+	defer log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Leaving")
+
+	ext_tennats, err := db.TenantRepository().RetrieveAllActiveTenants()
+	if ext_tennats == nil {
+		log.Info("No tenants configured")
+		return err
+	}
+	log.Info("Tenants retrieved: ", len(ext_tennats))
+	for _, tenant := range ext_tennats {
+		///Read Tenant Configuration
+		///Get configuration string and convert that string to corresponding key value pair
+		/// get ahMapping data: getHostHardwareUuid()
+		///get hosts data for the getHostHardwareUuid()
+		///	populateHostDetails()
+		configuartion := tenant.Config
+		log.Info("configuartion: ", configuartion)
+		configStruct := new(config)
+		///configuartion is a string containing keys and values information
+		err = configStruct.GetConfigStruct(configuartion)
+		if err != nil {
+			log.Info("trace 1")
+			return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+		}
+		/// get ahMapping data: getHostHardwareUuid(). Get all the mappings with given tenantID and deleted = false.
+		log.Info("trace 2: ", tenant.Id)
+		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id, Deleted: false})
+		if err != nil {
+			return errors.Wrap(err, "synchAttestationInfo: Failed to get tenant mapping")
+		}
+		log.Info("tenant_mapping retrieved: ", len(tenant_mapping))
+
+		for _, mapping := range tenant_mapping {
+			hardwareuuid := mapping.HostHardwareUUID
+			log.Info("hardwareuuid: ", hardwareuuid)
+			host, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: hardwareuuid, Deleted: false})
+			if host == nil {
+				log.Info("No host with this uuid")
+				return err
+			}
+			log.Info("trace 3")
+			hostDetailsPtr, err := populateHostDetails(host)
+			log.Info("trace 4")
+			if err != nil {
+				return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+			}
+			///Now add the host in a list of hosts
+			log.Info("hostDetails: ", hostDetailsPtr)
+		}
+
+	}
+	//processDataToPlugins(tenant, hostsData, configuartion.Plugins)
+	return nil
+}
+
+/*func processDataToPlugins(*types.Tenant, *types., ) {
+}*/
+
+func populateHostDetails(h1 *types.Host) (*hostDetails, error) {
+	details := new(hostDetails)
+	details.uuid = h1.Id
+	details.hardwareUuid = h1.HardwareUUID
+	details.hostname = h1.HostName
+
+	platformData := new(platformData)
+	platformData.sgx_enabled = h1.SGXEnabled
+	platformData.sgx_supported = h1.SGXSupported
+	platformData.flc_enabled = h1.FLCEnabled
+	platformData.tcbUpToDate = h1.TCBUpToDate
+	platformData.epc_size = h1.EPCSize
+
+	trustReportBytes, err := (json.Marshal(&platformData))
+	if err != nil {
+		return nil, errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+	}
+	trustReport := string(trustReportBytes)
+	signedTrustReport, err := createSignedTrustReport(trustReport)
+	if err != nil {
+		return nil, errors.Wrap(err, "synchAttestationInfo: Failed to get signed trust report")
+	}
+	details.trust_report = trustReport
+	details.signed_trust_report = signedTrustReport ///same as details.trust_report only difference this that this signed
+	return details, nil
+}

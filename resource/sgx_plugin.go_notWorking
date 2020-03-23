@@ -1,0 +1,460 @@
+/*
+ * Copyright (C) 2019 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+package resource
+
+import (
+	"encoding/json"
+	//"fmt"
+	"github.com/pkg/errors"
+	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/sgx-attestation-hub/repository"
+	"intel/isecl/sgx-attestation-hub/types"
+	"net/http"
+
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
+	"golang.org/x/crypto/pkcs12"
+
+	//"encoding/pem"
+
+	"io/ioutil"
+)
+
+type Property struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type Plugin struct {
+	Name       string     `json:"name,omitempty"`
+	Properties []Property `json:"properties"`
+}
+
+type tenantConfig struct {
+	TenantId   string   `json:"id"`
+	TenantName string   `json:"name"`
+	Plugins    []Plugin `json:"plugins"`
+	Deleted    bool     `json:"deleted"`
+}
+
+type hostDetails struct {
+	uuid                string
+	hardwareUuid        string
+	trust_report        string
+	hostname            string
+	signed_trust_report string
+}
+type PublishData struct {
+	host_details []hostDetails
+	tenantId     string
+}
+
+type PlatformData struct {
+	Sgx_enabled   bool   `json:"sgx-enabled"`
+	Sgx_supported bool   `json:"sgx-supported"`
+	Flc_enabled   bool   `json:"flc-enabled"`
+	TcbUpToDate   bool   `json:"tcbUpToDate"`
+	Epc_size      string `json:"epc-size"`
+}
+
+type HostAttributesSpec struct {
+	sgx_enabled         bool `json:"sgx-enabled"`
+	sgx_supported       bool `json:"sgx-supported"`
+	hostname            string
+	signed_trust_report string
+}
+
+type HostAttributesMetadata struct {
+	name string `json:"name"`
+}
+
+type HostAttributesCRD struct {
+	Metadata   HostAttributesMetadata `json:"metadata"`
+	ApiVersion string                 `json:"apiVersion"`
+	Kind       string                 `json:"kind"`
+	Spec       []HostAttributesSpec   `json:"spec"`
+}
+
+func (e *tenantConfig) GetConfigStruct(configuartion string) error {
+
+	log.Info("resource/sgx_plugin:GetConfigStruct() Entering: ", configuartion)
+	defer log.Trace("resource/sgx_plugin:GetConfigStruct() Leaving")
+
+	err := json.Unmarshal(([]byte(configuartion)), e)
+	if err != nil {
+		log.Info("trace shef 1: ", err)
+		return errors.Wrap(err, "configuration Unmarshal Failed")
+	}
+	log.Info("trace shef 2: ", *e)
+	return nil
+}
+
+func (e *Plugin) GetCredentials(configuartion string) error {
+	log.Info("resource/sgx_plugin:GetCredentials() Entering: ", configuartion)
+	defer log.Trace("resource/sgx_plugin:GetConfigStruct() Leaving")
+	err := json.Unmarshal(([]byte(configuartion)), e)
+	if err != nil {
+		log.Info("trace shef 1: ", err)
+		return errors.Wrap(err, "configuration Unmarshal Failed")
+	}
+	log.Info("trace shef 2: ", *e)
+	return err
+}
+
+func createSignedTrustReport(createSignedTrustReport string) (string, error) {
+	///Get the privateKeyFromPath
+	var privateKey *rsa.PrivateKey
+	rsaPrivateKeyLocation := constants.PrivatekeyLocation
+
+	log.Info("rsaPrivateKeyLocation: ", rsaPrivateKeyLocation)
+	priv, err := ioutil.ReadFile(rsaPrivateKeyLocation)
+	//log.Info("priv: ", priv)
+	if err != nil {
+		log.Error("No RSA private key found: ", err)
+		return "", errors.New("No RSA Key file path provided")
+	}
+
+	parsedKey, err := x509.ParsePKCS8PrivateKey(priv)
+	if err != nil {
+		log.Error("Cannot parse RSA private key from file: ", err)
+		return "", errors.New("Cannot parse RSA private key from file")
+	}
+	privateKey, ok := parsedKey.(*rsa.PrivateKey)
+	if !ok {
+		log.Error("Unable to parse RSA private key")
+		return "", errors.New("Unable to parse RSA private key")
+	}
+	hashEntity := sha512.New384()
+	hashEntity.Write([]byte(createSignedTrustReport))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA384, hashEntity.Sum(nil))
+	signatureString := base64.StdEncoding.EncodeToString(signature)
+	return signatureString, nil
+}
+
+func SynchAttestationInfo(db repository.SAHDatabase) error {
+	log.Info("Calling out plugins to push host data")
+	log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Entering")
+	defer log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Leaving")
+
+	ext_tennats, err := db.TenantRepository().RetrieveAllActiveTenants()
+	if ext_tennats == nil {
+		log.Info("No tenants configured")
+		return err
+	}
+	log.Info("Tenants retrieved: ", len(ext_tennats))
+	for _, tenant := range ext_tennats {
+		///Read Tenant Configuration
+		///Get configuration string and convert that string to corresponding key value pair
+		/// get ahMapping data: getHostHardwareUuid()
+		///get hosts data for the getHostHardwareUuid()
+		///	populateHostDetails()
+		configuartion := tenant.Config
+		log.Info("configuartion: ", configuartion)
+		configStruct := new(tenantConfig)
+		///configuartion is a string containing keys and values information
+		err = configStruct.GetConfigStruct(configuartion)
+		if err != nil {
+			log.Info("trace 1")
+			return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+		}
+		/// get ahMapping data: getHostHardwareUuid(). Get all the mappings with given tenantID and deleted = false.
+		log.Info("trace 2: ", tenant.Id)
+		configStruct.TenantId = tenant.Id
+		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id, Deleted: false})
+		if err != nil {
+			return errors.Wrap(err, "synchAttestationInfo: Failed to get tenant mapping")
+		}
+		log.Info("tenant_mapping retrieved: ", len(tenant_mapping))
+
+		var hostDataSlice []hostDetails
+		for _, mapping := range tenant_mapping {
+			hardwareuuid := mapping.HostHardwareUUID
+			log.Info("hardwareuuid: ", hardwareuuid)
+			host, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: hardwareuuid, Deleted: false})
+			if host == nil {
+				log.Info("No host with this uuid")
+				return err
+			}
+			log.Info("trace 3 host infomartion: ", host)
+			hostDetailsPtr, err := populateHostDetails(host)
+			log.Info("trace 4")
+			if err != nil {
+				return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+			}
+			///Now add the host in a list of hosts
+			log.Info("hostDetails: ", hostDetailsPtr)
+			hostDataSlice = append(hostDataSlice, *hostDetailsPtr)
+		}
+		log.Info("hostDataSlice size: ", len(hostDataSlice))
+		processDataToPlugins(tenant, hostDataSlice, configStruct.Plugins, db)
+	}
+
+	return nil
+}
+
+func processDataToPlugins(t1 types.Tenant, h1 []hostDetails, p1 []Plugin, db repository.SAHDatabase) error {
+	log.Info("t1: ", t1)
+	log.Info("h1: ", h1)
+	log.Info("p1: ", p1)
+	for _, plugin := range p1 {
+		var pData PublishData
+		pData.tenantId = t1.Id
+		pData.host_details = h1
+		log.Info("pData: ", pData)
+		var value string
+		for _, property := range plugin.Properties {
+			log.Info("property: ", property)
+			if property.Key == "plugin.provider" {
+				value = property.Value
+				break
+			}
+		}
+		if value == "" {
+			////report error
+			log.Info("value of plugin provider is null")
+			return errors.New("value of plugin provider is null")
+			//return nil
+		}
+		///Get Plugin class name
+		err := addCredentialToPlugin(t1, plugin, db)
+		if err != nil {
+			log.Info("got error: ", err)
+			return err
+		}
+		if value == "Kubernetes" {
+			err := Pushdata(pData, plugin)
+			if err != nil {
+				log.Info("got error: ", err)
+				return err
+			}
+		} else if value == "OpenStack" {
+		} else {
+			///error
+			log.Info("plugin provider doesn't match")
+			return errors.New("plugin provider doesn't match")
+		}
+	}
+	return nil
+}
+
+func Pushdata(pData PublishData, plugin Plugin) error {
+	log.Info("Pushdata entering: ", pData)
+	///Convert PublishData to json string
+	/*js, err := json.Marshal(pData)
+	log.Info("js: ", js)
+	if err != nil {
+		log.Info("Marshalling unsuccessful")
+		return err
+	}*/
+	////TODO: validate
+
+	var hostSpecArr []HostAttributesSpec
+	for _, p1 := range pData.host_details {
+		///Unmarshal hostDetails.trust_report and create a json object
+		///get signedReport
+		///Create a struct representing values ot be snet to K8s
+		///Initialize these values to it
+		var v1 HostAttributesSpec
+		v1.signed_trust_report = p1.signed_trust_report
+		var e PlatformData
+		log.Info("p1.trust_report: ", p1.trust_report)
+		err := json.Unmarshal(([]byte(p1.trust_report)), &e)
+		if err != nil {
+			log.Info("trace shef 1: ", err)
+			return errors.Wrap(err, "configuration Unmarshal Failed")
+		}
+		v1.sgx_enabled = e.Sgx_enabled
+		v1.sgx_supported = e.Sgx_supported
+		v1.hostname = p1.hostname
+		hostSpecArr = append(hostSpecArr, v1)
+	}
+	log.Info("host attributes in CRD: ", hostSpecArr)
+	str := string(pData.tenantId)
+	var m1 HostAttributesMetadata
+	m1.name = str
+	var v2 HostAttributesCRD
+	v2.Metadata = m1
+	v2.ApiVersion = constants.API_VERSION
+	v2.Kind = constants.HOSTATTRIBUTES_CRD
+	v2.Spec = hostSpecArr
+	log.Info("final CRD Data: ", v2)
+	/*str1 := string(v2)
+	log.Info("str1: ", str1)
+
+	var str11 []string*/
+	var arr1 []HostAttributesCRD
+	arr1 = append(arr1, v2)
+	var url string
+	for _, ss := range arr1 {
+		log.Info("ss: ", ss)
+		///Each CRD push data
+		tenantId := str ///get from v2.MetaData
+		//crdKind := ss.Kind
+		urlKind := constants.URL_HOSTATTRIBUTES
+		///Build End point urls and publish to K8s
+		var value string
+		for _, property := range plugin.Properties {
+			log.Info("property: ", property)
+			if property.Key == "api.endpoint" {
+				value = property.Value
+				break
+			}
+		}
+
+		url = value + constants.PATH + urlKind + constants.SLASH + tenantId
+		//https: //<k8s-master-IP>:6443/apis/crd.isecl.intel.com/v1beta1/namespaces/default/hostattributes/<tenant-id>-isecl-attributes-object
+		log.Info("url: ", url)
+		///Hard Coding the url as of now
+		url = "https://10.80.245.179:6443/apis/crd.isecl.intel.com/v1beta1/namespaces/default/hostattributes/6f52b2e6-0352-42df-bb73-2d865e71520b-isecl-attributes-object"
+	}
+	encryptedCaCert, err := ioutil.ReadFile("/etc/certs/root_k8s_trust.p12")
+	if err != nil {
+		log.Info("error came: ", err)
+		return err
+	}
+	/*
+		password, err := []byte("XaH15NteqCXAnJUwesoBdMNOkPYff0tKB1dBfr3KzmK50Dds90FL8Yh0jZeZKQYy")
+		decryptedData, err := DecryptPEMBlock(encryptedCaCert, password)
+		if err != nil {
+			log.Info("error came: ", err)
+			return err
+		}*/
+	decryptedD, err := pkcs12.ToPEM(encryptedCaCert, "XaH15NteqCXAnJUwesoBdMNOkPYff0tKB1dBfr3KzmK50Dds90FL8Yh0jZeZKQYy")
+	var pemData []byte
+	for _, b := range decryptedD {
+		pemData = append(pemData, pem.EncodeToMemory(b)...)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(pemData)
+
+	encryptedCert, err := ioutil.ReadFile("/etc/certs/root_k8s_client.p12")
+
+	if err != nil {
+		log.Info("error came: ", err)
+		return err
+	}
+	key, cert, err := pkcs12.Decode(encryptedCert, "LFMyXVfkMqx72xWdTaUMAUnoefQrbdsEOB21xoSSO7m6Uqzbpg7W0pGxz3iWyMYl")
+	if err != nil {
+		log.Info("error came in pkcs12.Decode: ", err)
+		return err
+	}
+	//ioutil.WriteFile("/opt/sgx-attestation-hub/configuration/cert.pem", cert, 777)
+	//ioutil.WriteFile("/opt/sgx-attestation-hub/configuration/key.pem", key, 777)
+
+	//cert, err = tls.LoadX509KeyPair("/opt/sgx-attestation-hub/configuration/cert.pem", "/opt/sgx-attestation-hub/configuration/key.pem")
+	tlsCert := tls.Certificate{
+		Certificate: [][]byte{cert.Raw},
+		PrivateKey:  key.(crypto.PrivateKey),
+		Leaf:        cert,
+	}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:      caCertPool,
+				Certificates: []tls.Certificate{tlsCert},
+			},
+		},
+	}
+	// Request /hello via the created HTTPS client over port 8443 via GET
+	log.Info("trace 1")
+	r, err := client.Get(url)
+	if err != nil {
+		log.Info("error came in client.Get: ", err)
+		return err
+	}
+
+	// Read the response body
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Info("error came in ioutil.ReadAll: ", err)
+		return err
+	}
+	log.Info("body: ", body)
+	return nil
+}
+
+func validateAndSend(plugin Plugin) {
+	log.Info("validateAndSend entering")
+	///We will validate later
+	///	generateCrd(data)
+
+}
+
+func addCredentialToPlugin(t1 types.Tenant, p1 Plugin, db repository.SAHDatabase) error {
+	//tenantId := t1.Id
+	//pluginName := p1.Name
+	credential := types.TenantPluginCredential{
+		TenantUUID: t1.Id,
+		PluginName: p1.Name,
+	}
+	plugin_credential, err := db.TenantPluginCredentialRepository().Retrieve(credential)
+	if err != nil {
+		log.WithError(err).WithField("filter", plugin_credential).Info("failed to retrieve credentials")
+		return err
+	}
+	///Get all the credenials from db which will come as a string.
+	///This string is converted into json key value pair of type
+	//configStruct := new(tenantConfig)
+	credential_properties := new(Plugin)
+	///configuartion is a string containing keys and values information
+	//err = configStruct.GetConfigStruct(configuartion)
+	err = credential_properties.GetCredentials(plugin_credential.Credential)
+	if err != nil {
+		log.Info("got error: ", err)
+		return err
+	}
+	log.Info("credential_properties: ", credential_properties)
+	///Now add the property array to Plugin array
+	log.Info("values of plugins before credentials: ", p1)
+	for _, prop := range credential_properties.Properties {
+		p1.Properties = append(p1.Properties, prop)
+	}
+	log.Info("values of plugins after credentials: ", p1)
+
+	return nil
+}
+
+func populateHostDetails(h1 *types.Host) (*hostDetails, error) {
+	details := new(hostDetails)
+	details.uuid = h1.Id
+	details.hardwareUuid = h1.HardwareUUID
+	details.hostname = h1.HostName
+
+	log.Info("details: ", details)
+	log.Info("h1.Id: ", h1.Id)
+	log.Info("h1.HostName: ", h1.HostName)
+	log.Info("h1.SGXEnabled: ", h1.SGXEnabled)
+	platformData1 := new(PlatformData)
+	//var platformData1 PlatformData
+	//platformData1 := &PlatformData{sgx_enabled: h1.SGXEnabled}
+	platformData1.Sgx_enabled = h1.SGXEnabled
+	platformData1.Sgx_supported = h1.SGXSupported
+	platformData1.Flc_enabled = h1.FLCEnabled
+	platformData1.TcbUpToDate = h1.TCBUpToDate
+	platformData1.Epc_size = h1.EPCSize
+
+	log.Info("platformData1: ", platformData1)
+	trustReportBytes, err := (json.Marshal(platformData1))
+	if err != nil {
+		return nil, errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+	}
+	trustReport := string(trustReportBytes)
+	log.Info("trustReport: ", trustReport)
+	signedTrustReport, err := createSignedTrustReport(trustReport)
+	if err != nil {
+		return nil, errors.Wrap(err, "synchAttestationInfo: Failed to get signed trust report")
+	}
+	details.trust_report = trustReport
+	details.signed_trust_report = signedTrustReport ///same as details.trust_report only difference this that this signed
+	return details, nil
+}

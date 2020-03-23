@@ -34,15 +34,15 @@ func (r *PostgresTenantPluginCredentialRepository) Create(p types.TenantPluginCr
 }
 
 func (r *PostgresTenantPluginCredentialRepository) Retrieve(p types.TenantPluginCredential) (*types.TenantPluginCredential, error) {
-	log.Trace("repository/postgres/pg_tenant_plugin_credential: Retrieve() Entering")
+	log.Info("repository/postgres/pg_tenant_plugin_credential: Retrieve() Entering")
 	defer log.Trace("repository/postgres/pg_tenant_plugin_credential: Retrieve() Leaving")
 
-	var c types.HostTenantMapping
+	var c types.TenantPluginCredential
 	err := r.db.Where(&p).First(&c).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): Failed to retrieve Tenant Plugin Credential")
 	}
-	return &p, nil
+	return &c, nil
 }
 
 func (r *PostgresTenantPluginCredentialRepository) RetrieveAll(p types.TenantPluginCredential) (types.TenantPluginCredentials, error) {
@@ -76,4 +76,3 @@ func (r *PostgresTenantPluginCredentialRepository) Delete(p types.TenantPluginCr
 	}
 	return nil
 }
-

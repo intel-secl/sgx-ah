@@ -1,0 +1,12 @@
+func (r *PostgresHostRepository) Retrieve(h types.Host) (*types.Host, error) {
+    log.Trace("repository/postgres/pg_tenant: RetrieveAll() Entering")
+    defer log.Trace("repository/postgres/pg_tenant: RetrieveAll() Leaving")
+
+    var p types.Host
+    err := r.db.Where(&h).First(&p).Error
+    if err != nil {
+        return nil, errors.Wrap(err, "RetrieveAll(): failed to retrieve all Tenants")
+    }
+    return &p, nil
+}
+

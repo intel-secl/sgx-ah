@@ -17,6 +17,7 @@ import (
 
 // CheckPidFile checks if /var/run/threat-detection/tdagent.pid exists
 func CheckPidFile(path string) (pid int, err error) {
+	log.Info("path: ", path)
 	pidData, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.WithError(err).Debug("Failed to read pidfile")

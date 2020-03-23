@@ -42,9 +42,8 @@ func (r *PostgresHostRepository) Retrieve(h types.Host) (*types.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): failed to retrieve Host")
 	}
-	return &h, nil
+	return &p, nil
 }
-
 
 func (r *PostgresHostRepository) RetrieveAll(h types.Host) (types.Hosts, error) {
 	log.Trace("repository/postgres/pg_host: RetrieveAll() Entering")
@@ -77,4 +76,3 @@ func (r *PostgresHostRepository) Delete(h types.Host) error {
 	}
 	return nil
 }
-

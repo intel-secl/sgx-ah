@@ -1,0 +1,16 @@
+{
+    "apiVersion": "crd.isecl.intel.com/v1beta1",
+    "kind": "HostAttributesCrd",
+    "metadata": {
+        "name": "6f52b2e6-0352-42df-bb73-2d865e71520b-isecl-attributes-object"
+    },
+    "spec": {
+        "hostList": [
+            {
+                "hostName": "R10.165.58.28",
+                "sgx-enabled": "true",
+                "signedTrustReport": "Miiy3fienrv96pLMElkW/vgf3pwyqK22EbO22FPcZI02wswvdU1wTDo7HI1Ipwc5cxDowKU92qOpcG34mEUDfQqNpvkssjyoOCkAfgvz5QO/1OLkcb600dUEC6x8PT9vw6OMkvYAzhLS/2iZgaW+x2vEryqyfbNnFEDb54jLvUcfD24AzMmWSomgkVhb1+w6oJ0iRjBR6IweJnr5WRTnlTlrnvqIGUiKpuktxgf++G0n3oXvsVAFiZaqzFrb96VmBJ0IrtzK1P0g6YX0BU6aeYc3Ajyg9b127yQSvWIJnZupzfIGeyYPj2NbykSQg6HUOVLYJ65seBGraFWAjI17dLELD2JPfjv+3+uotPPBlAnbwUG6mQTJoX3dtzhSa63y3qvIiWZFDvLzgHG5nobvGXMGb3ZByAJ8qiL/z3QrcN4ENikur/BVme+xrUG9e6I2ceRbhbnZXsWg9kqBB6gDpOO0Kl66Kqy7QENK8ij84+Dn+bGzZ2b3i/crIJIvAfld} {true true 10.165.58.28 Miiy3fienrv96pLMElkW/vgf3pwyqK22EbO22FPcZI02wswvdU1wTDo7HI1Ipwc5cxDowKU92qOpcG34mEUDfQqNpvkssjyoOCkAfgvz5QO/1OLkcb600dUEC6x8PT9vw6OMkvYAzhLS/2iZgaW+x2vEryqyfbNnFEDb54jLvUcfD24AzMmWSomgkVhb1+w6oJ0iRjBR6IweJnr5WRTnlTlrnvqIGUiKpuktxgf++G0n3oXvsVAFiZaqzFrb96VmBJ0IrtzK1P0g6YX0BU6aeYc3Ajyg9b127yQSvWIJnZupzfIGeyYPj2NbykSQg6HUOVLYJ65seBGraFWAjI17dLELD2JPfjv+3+uotPPBlAnbwUG6mQTJoX3dtzhSa63y3qvIiWZFDvLzgHG5nobvGXMGb3ZByAJ8qiL/z3QrcN4ENikur/BVme+xrUG9e6I2ceRbhbnZXsWg9kqBB6gDpOO0Kl66Kqy7QENK8ij84+Dn+bGzZ2b3i/crIJIvAfld"
+            }
+        ]
+    }
+}
