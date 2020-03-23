@@ -34,7 +34,7 @@ func (r *PostgresTenantPluginCredentialRepository) Create(p types.TenantPluginCr
 }
 
 func (r *PostgresTenantPluginCredentialRepository) Retrieve(p types.TenantPluginCredential) (*types.TenantPluginCredential, error) {
-	log.Trace("repository/postgres/pg_tenant_plugin_credential: Retrieve() Entering")
+	log.Info("repository/postgres/pg_tenant_plugin_credential: Retrieve() Entering")
 	defer log.Trace("repository/postgres/pg_tenant_plugin_credential: Retrieve() Leaving")
 
 	var c types.TenantPluginCredential
@@ -76,4 +76,3 @@ func (r *PostgresTenantPluginCredentialRepository) Delete(p types.TenantPluginCr
 	}
 	return nil
 }
-

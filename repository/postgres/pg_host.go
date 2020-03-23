@@ -45,7 +45,6 @@ func (r *PostgresHostRepository) Retrieve(h types.Host) (*types.Host, error) {
 	return &p, nil
 }
 
-
 func (r *PostgresHostRepository) RetrieveAll(h types.Host) (types.Hosts, error) {
 	log.Trace("repository/postgres/pg_host: RetrieveAll() Entering")
 	defer log.Trace("repository/postgres/pg_host: RetrieveAll() Leaving")
@@ -77,4 +76,3 @@ func (r *PostgresHostRepository) Delete(h types.Host) error {
 	}
 	return nil
 }
-
