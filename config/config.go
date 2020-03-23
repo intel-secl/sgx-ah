@@ -45,6 +45,7 @@ type Configuration struct {
 	}
 	CMSBaseUrl string
 	AuthServiceUrl string
+	SchedulerTimer   int
 	Subject    struct {
                 TLSCertCommonName string
                 Organization      string
@@ -152,8 +153,14 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
                         conf.Subject.Locality = constants.DefaultSAHCertLocality
         }
 
-        return conf.Save()
+		schedulerTimeout, err := c.GetenvInt("SAHUB_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
+		if err == nil && schedulerTimeout != 0 {
+			conf.SchedulerTimer = schedulerTimeout
+		} else if conf.SchedulerTimer == 0 {
+			conf.SchedulerTimer = constants.DefaultSAHUBSchedulerTimer
+		}
 
+        return conf.Save()
 }
 
 func Load(path string) *Configuration {

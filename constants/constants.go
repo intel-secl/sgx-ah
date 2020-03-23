@@ -37,11 +37,12 @@ const (
 	DefaultKeyAlgorithm           = "rsa"
 	DefaultKeyAlgorithmLength     = 3072
 	DefaultSAHTlsSan              = "127.0.0.1,localhost"
-        DefaultSAHTlsCn               = "SGX AH TLS Certificate"
-        DefaultSAHCertOrganization    = "INTEL"
-        DefaultSAHCertCountry         = "US"
-        DefaultSAHCertProvince        = "SF"
-        DefaultSAHCertLocality        = "SC"
+	DefaultSAHTlsCn               = "SGX AH TLS Certificate"
+	DefaultSAHCertOrganization    = "INTEL"
+	DefaultSAHCertCountry         = "US"
+	DefaultSAHCertProvince        = "SF"
+	DefaultSAHCertLocality        = "SC"
+	DefaultSAHUBSchedulerTimer      = 120
 	DefaultSAHRefreshHours	      = 24
 	DefaultJwtValidateCacheKeyMins = 60
 )
