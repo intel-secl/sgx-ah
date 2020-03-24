@@ -12,5 +12,4 @@ type HostRepository interface {
 	RetrieveAll(types.Host) (types.Hosts, error)
 	Update(types.Host) error
 	Delete(types.Host) error
-	//RetrieveActiveHost(types.Host) (*types.Host, error)
 }

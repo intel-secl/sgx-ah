@@ -42,15 +42,20 @@ if [ -z $SAVE_DB_INSTALL_LOG ] ; then
 	log_file=~/isecl_pgsahdb_install.log
 fi
 
-# download postgres repo
-yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm &>>$log_file
-yum module disable postgresql
-yum -y install postgresql11-server postgresql11 postgresql11-contrib &>>$log_file
 
-if [ $? -ne 0 ] ; then
-	echo "yum installation fail"
-	exit 1
+if rpm -q postgresql11; then
+	echo "postgress sql already installing..............."
+else
+	# download postgres repo
+	echo "postgress sql installing..............."
+	yum install https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm -y &>> $log_file
+	yum install postgresql11 postgresql11-server postgresql11-contrib postgresql11-libs -y &>> $log_file
+	if [ $? -ne 0 ] ; then
+		echo "yum installation fail"
+		exit 1
+	fi
 fi
+
 
 echo "Initializing postgres database ..."
 
@@ -112,7 +117,9 @@ if [ ! -f $PGDATA/pg_hba.conf ] ; then
         echo "# host all all $ISECL_PGDB_SERVICEHOST md5" >> $PGDATA/pg_hba.conf
         echo "hostssl all all $ISECL_PGDB_SERVICEHOST md5" >> $PGDATA/pg_hba.conf
     fi
+
     chown -R postgres:postgres /usr/local/pgsql
+
 fi
 
 echo "Setting up systemctl for postgres database ..."
