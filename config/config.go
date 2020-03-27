@@ -153,11 +153,11 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
                         conf.Subject.Locality = constants.DefaultSAHCertLocality
         }
 
-		schedulerTimeout, err := c.GetenvInt("SAHUB_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
+		schedulerTimeout, err := c.GetenvInt("SAH_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
 		if err == nil && schedulerTimeout != 0 {
 			conf.SchedulerTimer = schedulerTimeout
 		} else if conf.SchedulerTimer == 0 {
-			conf.SchedulerTimer = constants.DefaultSAHUBSchedulerTimer
+			conf.SchedulerTimer = constants.DefaultSAHSchedulerTimer
 		}
 
         return conf.Save()

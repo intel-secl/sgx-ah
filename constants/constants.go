@@ -42,7 +42,7 @@ const (
 	DefaultSAHCertCountry         = "US"
 	DefaultSAHCertProvince        = "SF"
 	DefaultSAHCertLocality        = "SC"
-	DefaultSAHUBSchedulerTimer      = 120
+	DefaultSAHSchedulerTimer    = 120
 	DefaultSAHRefreshHours	      = 24
 	DefaultJwtValidateCacheKeyMins = 60
 )

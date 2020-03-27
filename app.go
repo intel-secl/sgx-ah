@@ -26,6 +26,7 @@ import (
 	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository/postgres"
+	"intel/isecl/sgx-attestation-hub/resource/scheduler"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/resource"
 	"intel/isecl/sgx-attestation-hub/tasks"
@@ -505,7 +506,7 @@ func (a *App) startServer() error {
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 	}
-	scheduler.StartSAHUBSchedular(c.SchedulerTimer)
+	scheduler.StartSAHSchedular(sahDB, c.SchedulerTimer)	
 
 	// Setup signal handlers to gracefully handle termination
 	stop := make(chan os.Signal)
