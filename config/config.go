@@ -31,6 +31,7 @@ type Configuration struct {
 		SSLMode  string
 		SSLCert  string
 	}
+	AAS_API_URL  string
 	LogLevel log.Level
 
 	AuthDefender struct {

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -21,24 +22,21 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	stdlog "log"
 
+	"intel/isecl/lib/common/crypt"
+	e "intel/isecl/lib/common/exec"
+	commLog "intel/isecl/lib/common/log"
+	commLogInt "intel/isecl/lib/common/log/setup"
+	cos "intel/isecl/lib/common/os"
+	"intel/isecl/lib/common/setup"
+	"intel/isecl/lib/common/validation"
 	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository/postgres"
-	"intel/isecl/sgx-attestation-hub/resource/scheduler"
 	"intel/isecl/sgx-attestation-hub/repository"
+	"intel/isecl/sgx-attestation-hub/repository/postgres"
 	"intel/isecl/sgx-attestation-hub/resource"
 	"intel/isecl/sgx-attestation-hub/tasks"
 	"intel/isecl/sgx-attestation-hub/version"
-	"intel/isecl/lib/common/crypt"
-	"intel/isecl/lib/common/setup"
-	"intel/isecl/lib/common/validation"
-	e "intel/isecl/lib/common/exec"
-	cos "intel/isecl/lib/common/os"
-	//cmw "intel/isecl/lib/common/middleware"
-	commLog "intel/isecl/lib/common/log"
-	commLogInt "intel/isecl/lib/common/log/setup"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -46,7 +44,6 @@ import (
 
 	// Import driver for GORM
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-
 )
 
 type App struct {
@@ -490,13 +487,15 @@ func (a *App) startServer() error {
 	// Create public routes that does not need any authentication
 	r := mux.NewRouter()
 
-	sr := r.PathPrefix("/sah/test/").Subrouter()
+	sr := r.PathPrefix("/sgx-ah/v1/").Subrouter()
+	//var cacheTime, _ = time.ParseDuration(constants.JWTCertsCacheTime)
+	//sr.Use(middleware.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, fnGetJwtCerts, cacheTime))
 	//sr.Use(cmw.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, a.retrieveJWTSigningCerts))
-	func(setters ...func(*mux.Router)) {
+	func(setters ...func(*mux.Router, repository.SAHDatabase)) {
 		for _, setter := range setters {
-			setter(sr)
+			setter(sr, sahDB)
 		}
-	}(resource.SetTestJwt)
+	}(resource.SGXTenantRegister, resource.SGXHostTenantMapping)
 
 
 	tlsconfig := &tls.Config{
@@ -787,4 +786,63 @@ func (a *App) DatabaseFactory() (repository.SAHDatabase, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+/* Fetch JWT certificate from AAS
+func fnGetJwtCerts() error {
+	log.Trace("server:fnGetJwtCerts() Entering")
+	defer log.Trace("server:fnGetJwtCerts() Leaving")
+
+	var c config.Configuration
+	if !strings.HasSuffix(c.AAS_API_URL, "/") {
+		c.AAS_API_URL = c.AAS_API_URL + "/"
+	}
+	url := c.AAS_API_URL + "noauth/jwt-certificates"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return errors.Wrap(err, "server:fnGetJwtCerts() Could not create http request")
+	}
+	req.Header.Add("accept", "application/x-pem-file")
+	rootCaCertPems, err := cos.GetDirFileContents(constants.TrustedCAsStoreDir, "*.pem")
+	if err != nil {
+		return errors.Wrap(err, "server:fnGetJwtCerts() Could not read root CA certificate")
+	}
+
+	// Get the SystemCertPool, continue with an empty pool on error
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	for _, rootCACert := range rootCaCertPems {
+		if ok := rootCAs.AppendCertsFromPEM(rootCACert); !ok {
+			return err
+		}
+	}
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: false,
+				RootCAs:            rootCAs,
+			},
+		},
+	}
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "server:fnGetJwtCerts() Could not retrieve jwt certificate")
+	}
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	err = crypt.SavePemCertWithShortSha1FileName(body, constants.TrustedJWTSigningCertsDir)
+	if err != nil {
+		return errors.Wrap(err, "server:fnGetJwtCerts() Could not store Certificate")
+	}
+	return nil
+}*/
+
+//To be implemented if JWT certificate is needed from any other services
+func fnGetJwtCerts() error {
+	log.Trace("resource/service:fnGetJwtCerts() Entering")
+	defer log.Trace("resource/service:fnGetJwtCerts() Leaving")
+	return nil
 }

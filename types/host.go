@@ -19,7 +19,7 @@ type Host struct {
 	SGXEnabled         bool       `json:"-"`
 	FLCEnabled         bool       `json:"-"`
 	EPCSize            string     `json:"-"`
-    TCBUpToDate        string     `json:"-"`
+	TCBUpToDate        bool       `json:"-"`
 	Deleted            bool	      `json:"-" gorm:"type:bool;not null;default:false"`
 }
 

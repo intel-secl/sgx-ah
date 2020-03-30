@@ -11,8 +11,8 @@ import (
 type TenantPluginCredential struct {
 	Id                 string     `json:"-" gorm:"type:uuid;unique;primary_key;"`
 	TenantUUID         string     `json:"-" gorm:"type:uuid"`
-	TenantName         string     `json:"-"`
 	PluginName         string     `json:"-"`
+	TenantName         string     `json:"-"`
 	Credential         string     `json:"-"`
 	CreatedTime        time.Time  `json:"-"`
 }

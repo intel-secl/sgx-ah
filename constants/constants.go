@@ -26,6 +26,7 @@ const (
 	ServiceRemoveCmd              = "systemctl disable sgx-attestation-hub"
 	HashingAlgorithm              = crypto.SHA384
 	PasswordRandomLength          = 20
+	JWTCertsCacheTime             = "1m"
 	DefaultAuthDefendMaxAttempts  = 5
 	DefaultAuthDefendIntervalMins = 5
 	DefaultAuthDefendLockoutMins  = 15
@@ -42,7 +43,12 @@ const (
 	DefaultSAHCertCountry         = "US"
 	DefaultSAHCertProvince        = "SF"
 	DefaultSAHCertLocality        = "SC"
-	DefaultSAHSchedulerTimer    = 120
+	OpenStackPlugin               = "Nova"
+	KubernetesPlugin              = "kubernetes"
+	NovaPluginUserName            = "user.name"
+	NovaPluginUserPassword        = "user.password"
+	KubernetesClientKeystorePassword = "kubernetes.client.keystore.password"
+	KubernetesServerKeystorePassword = "kubernetes.server.keystore.password"
 	DefaultSAHRefreshHours	      = 24
 	DefaultJwtValidateCacheKeyMins = 60
 )
