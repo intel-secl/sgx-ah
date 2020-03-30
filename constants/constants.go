@@ -49,6 +49,7 @@ const (
 	NovaPluginUserPassword        = "user.password"
 	KubernetesClientKeystorePassword = "kubernetes.client.keystore.password"
 	KubernetesServerKeystorePassword = "kubernetes.server.keystore.password"
+	DefaultSAHSchedulerTimer         = 120
 	DefaultSAHRefreshHours	      = 24
 	DefaultJwtValidateCacheKeyMins = 60
 )

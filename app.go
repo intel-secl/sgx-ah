@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"flag"
 	"fmt"
+	"intel/isecl/sgx-attestation-hub/resource/scheduler"
 	"io"
 	"io/ioutil"
 	stdlog "log"
