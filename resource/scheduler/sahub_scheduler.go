@@ -60,6 +60,7 @@ func SAHSchedulerJob(db repository.SAHDatabase) error {
 	*/
 	err := resource.SynchAttestationInfo(db)
 	if err != nil {
+		log.Info("got error")
 		log.Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while pushing data to the tenant")
 	}
 	return nil

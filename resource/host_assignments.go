@@ -1,7 +1,7 @@
 /*
 * Copyright (C) 2020 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
-*/
+ */
 
 package resource
 
@@ -18,18 +18,18 @@ import (
 )
 
 type HostTenantMappingRequest struct {
-	TenantId         string   `json:"tenant_id"`
-	HardwareUUID     []string `json:"hardware_uuids"`
+	TenantId     string   `json:"tenant_id"`
+	HardwareUUID []string `json:"hardware_uuids"`
 }
 
 type TenantHostMapping struct {
-	MappingId    string   `json:"mapping_id"`
-	TenantId     string   `json:"tenant_id"`
-	HardwareUUID string   `json:"hardware_uuid"`
+	MappingId    string `json:"mapping_id"`
+	TenantId     string `json:"tenant_id"`
+	HardwareUUID string `json:"hardware_uuid"`
 }
 
 type HostTenantMappingResponse struct {
-	Mapping      []TenantHostMapping `json:"mappings"`
+	Mapping []TenantHostMapping `json:"mappings"`
 }
 
 func SGXHostTenantMapping(r *mux.Router, db repository.SAHDatabase) {
@@ -39,7 +39,7 @@ func SGXHostTenantMapping(r *mux.Router, db repository.SAHDatabase) {
 	r.Handle("/host-assignments", handlers.ContentTypeHandler(createHostTenantMapping(db), "application/json")).Methods("POST")
 }
 
-func uniqueHostHardwareIDs(huuIds []string) []string{
+func uniqueHostHardwareIDs(huuIds []string) []string {
 	log.Trace("resource/host_assignments: uniqueHostHardwareIDs() Entering")
 	defer log.Trace("resource/host_assignments: uniqueHostHardwareIDs() Leaving")
 
@@ -69,7 +69,7 @@ func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([
 
 	uniqueHuuIdList := uniqueHostHardwareIDs(input.HardwareUUID)
 
-	for _, huuId := range uniqueHuuIdList{
+	for _, huuId := range uniqueHuuIdList {
 		_, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: huuId})
 		if err != nil {
 			log.Error("resource/host_assignments: createMapping() Host does not exist with id :", huuId)
@@ -85,9 +85,9 @@ func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([
 		if err != nil {
 			return nil, errors.Wrap(err, "resource/host_assignments: createMapping() Error while caching host tenant mapping information")
 		}
-		mapping := TenantHostMapping {
-			MappingId: mappingCreated.Id,
-			TenantId: input.TenantId,
+		mapping := TenantHostMapping{
+			MappingId:    mappingCreated.Id,
+			TenantId:     input.TenantId,
 			HardwareUUID: huuId,
 		}
 		mappingResponse.Mapping = append(mappingResponse.Mapping, mapping)
@@ -117,14 +117,14 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 
 		validationErr := validation.ValidateUUIDv4(input.TenantId)
 		if validationErr != nil {
-			log.Error("resource/host_assignments: createHostTenantMapping() Error validating tenant Id" + err.Error())
+			log.Error("resource/host_assignments: createHostTenantMapping() Error validating tenant Id" + validationErr.Error())
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		for _, huuid := range input.HardwareUUID {
-			validationErr = validation.ValidateUUIDv4(huuid)
+			validationErr = validation.ValidateHardwareUUID(huuid)
 			if validationErr != nil {
-				log.Error("resource/host_assignments: createHostTenantMapping() Error validating host hardware UUID" + err.Error())
+				log.Error("resource/host_assignments: createHostTenantMapping() Error validating host hardware UUID" + validationErr.Error())
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}

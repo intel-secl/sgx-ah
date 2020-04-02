@@ -278,6 +278,7 @@ func (a *App) Run(args []string) error {
 	case "help":
 		a.printUsage()
 	case "start":
+		a.configureLogs(false, true)
 		return a.start()
 	case "stop":
 		a.configureLogs(true, false)
@@ -506,6 +507,7 @@ func (a *App) startServer() error {
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 	}
 	scheduler.StartSAHSchedular(sahDB, c.SchedulerTimer)
+	//resource.SynchAttestationInfo(sahDB)
 
 	// Setup signal handlers to gracefully handle termination
 	stop := make(chan os.Signal)

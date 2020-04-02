@@ -18,6 +18,7 @@ import (
 	"intel/isecl/sgx-attestation-hub/types"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 var log = clog.GetDefaultLogger()
@@ -63,7 +64,8 @@ type HostAttributesSpec struct {
 }
 
 func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) error {
-	log.Info("Pushdata entering")
+	log.Trace("Pushdata entering")
+	defer log.Trace("resource/plugin kubernetesPlugin:Pushdata() Leaving")
 
 	////TODO: validate
 	var hostSpecArr []HostAttributesSpec
@@ -100,13 +102,12 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 	crdData.Spec.HostAttributesArray = hostSpecArr
 	var arr1 []HostAttributesCRD
 	arr1 = append(arr1, crdData)
-	var url, clientPass, serverKeystore, clientKeystore string
+	var k8s_url, clientPass, serverKeystore, clientKeystore string
 	//var serverPass string ///TODO: Currently not being used as truststore is not being parsed
 	for _, ss := range arr1 {
 		log.Trace("hostAttributes: ", ss)
 		///Each CRD push data
 		tenantId := tenantIdStr ///get from crdData.MetaData
-		urlKind := constants.URL_HOSTATTRIBUTES
 		///Build End point urls and publish to K8s
 		var value string
 		for _, property := range plugin.Properties {
@@ -123,17 +124,12 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 			}
 		}
 
-		url1 := value + constants.PATH + urlKind + constants.SLASH + tenantId + "-isecl-attributes-object"
 		//https: //<k8s-master-IP>:6443/apis/crd.isecl.intel.com/v1beta1/namespaces/default/hostattributes/<tenant-id>-isecl-attributes-object
-
-		///Hard Coding the url as of now
-		///TODO: Need to configure this. Once clear database understanding is done will uncomment above code.
-		log.Info("url1: ", url1)
-		url = "https://10.80.245.179:6443/apis/crd.isecl.intel.com/v1beta1/namespaces/default/hostattributes/6f52b2e6-0352-42df-bb73-2d865e71520b-isecl-attributes-object"
+		k8s_url = value + constants.PATH + constants.SLASH + constants.URL_HOSTATTRIBUTES + constants.SLASH + tenantId + "-isecl-attributes-object"
 	}
 	CaCert, err := ioutil.ReadFile(serverKeystore)
 	if err != nil {
-		log.Info("error came in reading CaCert: ", err)
+		log.Error("error came in reading CaCert: ", err)
 		return errors.Wrap(err, "Can't read CaCert")
 	}
 
@@ -142,24 +138,24 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 
 	encryptedCert, err := ioutil.ReadFile(clientKeystore)
 	if err != nil {
-		log.Info("error came in reading client cetificate: ", err)
+		log.Error("error came in reading client cetificate: ", err)
 		return errors.Wrap(err, "Can't read clientCerificate")
 	}
 	key, cert, err := pkcs12.Decode(encryptedCert, clientPass)
 	if err != nil {
-		log.Info("error came in decoding client cetificate: ", err)
+		log.Error("error came in decoding client cetificate: ", err)
 		return errors.Wrap(err, "Can't decode clientCerificate")
 	}
 	value, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		log.Info("error came in x509.MarshalPKCS8PrivateKey: ", err)
+		log.Error("error came in x509.MarshalPKCS8PrivateKey: ", err)
 		return errors.Wrap(err, "Can't marshal key")
 	}
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: value})
 	clientCert, err := tls.X509KeyPair(pemCert, pemKey)
 	if err != nil {
-		log.Info("error came in tls.X509KeyPair: ", err)
+		log.Error("error came in tls.X509KeyPair: ", err)
 		return errors.Wrap(err, "can't create keyPair")
 	}
 
@@ -171,8 +167,22 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 			},
 		},
 	}
+	url, err := url.Parse(k8s_url)
+	if err != nil {
+		return errors.Wrap(err, "URL parsing failed")
+	}
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return errors.Wrap(err, "http NewRequest failed")
+	}
+	r, err := client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "client.Do failed")
+	}
 
-	r, err := client.Get(url)
+	//r, err := client.Get(url)
+	//req, err := http.NewRequest("GET", url, nil)
+	//r, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "GET Call failed")
 	}
@@ -191,13 +201,14 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		}
 		///Get MetaData from this
 		crdData.Metadata.ResourceVersion = hCRD.Metadata.ResourceVersion
+		log.Trace("crdData: ", crdData)
 
 		reqBytes, err := json.Marshal(crdData)
 		if err != nil {
 			return errors.Wrap(err, "error came in Marshalling CRDData")
 		}
 
-		req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(reqBytes))
+		req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewBuffer(reqBytes))
 		if err != nil {
 			return errors.Wrap(err, "PUT call failed here")
 		}
@@ -218,7 +229,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		if err != nil {
 			return errors.Wrap(err, "error came in Marshalling crdData")
 		}
-		req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBytes))
+		req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(reqBytes))
 		if err != nil {
 			return errors.Wrap(err, "POST call failed here")
 		}

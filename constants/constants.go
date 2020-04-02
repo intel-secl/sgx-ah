@@ -49,7 +49,7 @@ const (
 	NovaPluginUserPassword           = "user.password"
 	KubernetesClientKeystorePassword = "kubernetes.client.keystore.password"
 	KubernetesServerKeystorePassword = "kubernetes.server.keystore.password"
-	DefaultSAHSchedulerTimer         = 120
+	DefaultSAHSchedulerTimer         = 50
 	DefaultSAHRefreshHours           = 24
 	DefaultJwtValidateCacheKeyMins   = 60
 	PublickeyLocation                = ConfigDir + "sgx_hub_public_key.pem"
@@ -57,7 +57,7 @@ const (
 	API_VERSION                      = "crd.isecl.intel.com/v1beta1"
 	HOSTATTRIBUTES_CRD               = "HostAttributesCrd"
 	URL_HOSTATTRIBUTES               = "hostattributes"
-	PATH                             = "/apis/crd.isecl.intel.com/v1beta1/namespaces/default/"
+	PATH                             = "/apis/crd.isecl.intel.com/v1beta1/namespaces/default"
 	SLASH                            = "/"
 )
 

@@ -48,7 +48,7 @@ type hostDetails types.HostDetails
 
 func (e *tenantConfig) GetConfigStruct(configuartion string) error {
 
-	log.Info("resource/sgx_plugin:GetConfigStruct() Entering: ", configuartion)
+	log.Trace("resource/sgx_plugin:GetConfigStruct() Entering: ")
 	defer log.Trace("resource/sgx_plugin:GetConfigStruct() Leaving")
 
 	err := json.Unmarshal(([]byte(configuartion)), e)
@@ -59,11 +59,10 @@ func (e *tenantConfig) GetConfigStruct(configuartion string) error {
 }
 
 func GetCredentials(configuartion string, prop *[]types.Property) error {
-	log.Info("resource/sgx_plugin:GetCredentials() Entering: ", configuartion)
+	log.Trace("resource/sgx_plugin:GetCredentials() Entering")
 	defer log.Trace("resource/sgx_plugin:GetCredentials() Leaving")
 	err := json.Unmarshal(([]byte(configuartion)), prop)
 	if err != nil {
-		log.Info("got error in getting credentials: ", err)
 		return errors.Wrap(err, "configuration Unmarshal Failed")
 	}
 	return err
@@ -73,13 +72,13 @@ func GetAHPublicKey() []byte {
 	rsaPublicKeyLocation := constants.PublickeyLocation
 	pubKey, err := ioutil.ReadFile(rsaPublicKeyLocation)
 	if err != nil {
-		log.Info("Error in reading the hub pem file:", err)
+		log.Error("Error in reading the hub pem file:", err)
 	}
 	return pubKey
 }
 
 func createSignedTrustReport(createSignedTrustReport string) (string, error) {
-	log.Info("In createSignedTrustReport")
+	log.Trace("In createSignedTrustReport")
 	///Get the privateKeyFromPath
 	var privateKey *rsa.PrivateKey
 	rsaPrivateKeyLocation := constants.PrivatekeyLocation
@@ -153,33 +152,43 @@ func SynchAttestationInfo(db repository.SAHDatabase) error {
 		///configuartion is a string containing keys and values information
 		err = configStruct.GetConfigStruct(configuartion)
 		if err != nil {
-			return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+			log.Error("synchAttestationInfo: Failed to get configurations for tenant: ", tenant.Id)
+			continue
 		}
 		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id, Deleted: false})
 		if err != nil {
-			return errors.Wrap(err, "synchAttestationInfo: Failed to get tenant mapping")
+			log.Error("synchAttestationInfo: Failed to get tenant mapping for: ", tenant.Id)
+			continue
+		} else if len(tenant_mapping) == 0 {
+			log.Error("synchAttestationInfo: no host assigned to the tenant: ", tenant.Id)
+			continue
 		}
-		log.Trace("tenant_mapping retrieved: ", len(tenant_mapping))
+		log.Info("tenant_mapping retrieved: ", len(tenant_mapping))
 
 		var hostDataSlice []types.HostDetails
 		for _, mapping := range tenant_mapping {
 			hardwareuuid := mapping.HostHardwareUUID
 			host, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: hardwareuuid, Deleted: false})
 			if host == nil {
-				return errors.Wrap(err, "No host with this uuid")
+				//	return errors.New("No host with this uuid")
+				log.Error("synchAttestationInfo: No host with this uuid: ", hardwareuuid)
+				continue
 			}
 			hostDetailsPtr, err := populateHostDetails(host)
 			if err != nil {
-				return errors.Wrap(err, "synchAttestationInfo: Failed to get configurations")
+				log.Error("synchAttestationInfo: Failed to get configurations: ", err)
+				continue
 			}
 
 			///Now add the host in a list of hosts
 			hostDataSlice = append(hostDataSlice, *hostDetailsPtr)
 		}
 		log.Trace("Number of hosts to the tenant: ", len(hostDataSlice))
-		processDataToPlugins(tenant, hostDataSlice, configStruct.Plugins, db)
+		err = processDataToPlugins(tenant, hostDataSlice, configStruct.Plugins, db)
+		if err != nil {
+			log.Error("synchAttestationInfo: Failed to push data: ", err)
+		}
 	}
-
 	return nil
 }
 
@@ -192,7 +201,6 @@ func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Pl
 		pData.Host_details = h1
 		var value string
 		for _, property := range plugin.Properties {
-			log.Info("property: ", property)
 			if property.Key == "plugin.provider" {
 				value = property.Value
 				break
@@ -200,26 +208,26 @@ func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Pl
 		}
 		if value == "" {
 			////report error
-			log.Info("value of plugin provider is null")
+			log.Error("value of plugin provider is null")
 			return errors.New("value of plugin provider is null")
 		}
 		///Get Plugin class name
 		err := addCredentialToPlugin(t1, &plugin, db)
 		if err != nil {
-			log.Info("got error: ", err)
+			log.Error("got error while adding Credentials: ", err)
 			return errors.Wrap(err, "Couldn't add credentials for plugin")
 		}
 		if value == "Kubernetes" {
 			var k1 plugins.Kubernetes
 			err := k1.Pushdata(pData, plugin)
 			if err != nil {
-				log.Info("got error: ", err)
+				log.Error("got error while pushing the data: ", err)
 				return err
 			}
 		} else if value == "OpenStack" {
 		} else {
 			///error
-			log.Info("plugin provider doesn't match")
+			log.Error("plugin provider doesn't match")
 			return errors.New("plugin provider doesn't match")
 		}
 	}
@@ -233,7 +241,7 @@ func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SAHD
 	}
 	plugin_credential, err := db.TenantPluginCredentialRepository().Retrieve(credential)
 	if err != nil {
-		log.Info("didn't find any credential for plugin of tenant id: ", t1.Id)
+		log.Error("didn't find any credential for plugin of tenant id: ", t1.Id)
 		return errors.Wrap(err, "didn't find any credential for plugin")
 	}
 	///Get all the credenials from db which will come as a string.
@@ -242,16 +250,15 @@ func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SAHD
 	///configuartion is a string containing keys and values information
 	err = GetCredentials(plugin_credential.Credential, &credential_properties)
 	if err != nil {
-		log.Info("couldn't get any credentials: ", err)
+		log.Error("couldn't get any credentials: ", err)
 		return errors.Wrap(err, "couldn't get any credentials")
 	}
-	log.Info("credential_properties: ", credential_properties)
+	log.Trace("credential_properties: ", credential_properties)
 	///Now add the property array to Plugin array
 	for _, prop := range credential_properties {
 		p1.Properties = append(p1.Properties, prop)
-		log.Info("prop: ", prop)
 	}
-	log.Info("values of plugins after credentials: ", p1)
+	log.Trace("values of plugins after credentials: ", p1)
 	return nil
 }
 
@@ -271,7 +278,7 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 	hostPlatformData.Trusted = true
 	hostPlatformData.ValidTo = "2021-08-28T13:05:05.932Z"
 
-	log.Info("hostPlatformData: ", hostPlatformData)
+	log.Trace("hostPlatformData: ", hostPlatformData)
 	trustReportBytes, err := (json.Marshal(hostPlatformData))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal hostPlatformData to get trustReport")
