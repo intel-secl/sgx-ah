@@ -46,7 +46,9 @@ type Configuration struct {
 	}
 	CMSBaseUrl     string
 	AuthServiceUrl string
+	ShvsBaseUrl    string
 	SchedulerTimer int
+	BearerToken    string
 	Subject        struct {
 		TLSCertCommonName string
 		Organization      string
@@ -103,6 +105,20 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 	defer log.Trace("config/config:SaveConfiguration() Leaving")
 
 	var err error = nil
+
+	bearerToken, err := c.GetenvString("BEARER_TOKEN", "BEARER_TOKEN")
+	if err == nil && bearerToken != "" {
+		conf.BearerToken = bearerToken
+	} else if conf.BearerToken == "" {
+		log.Error("BEARER_TOKEN is not defined in environment")
+	}
+
+	shvsBaseUrl, err := c.GetenvString("SHVS_BASE_URL", "SHVS Base URL")
+	if err == nil && shvsBaseUrl != "" {
+		conf.ShvsBaseUrl = shvsBaseUrl
+	} else if conf.ShvsBaseUrl == "" {
+		log.Error("SHVS_BASE_URL is not defined in environment")
+	}
 
 	cmsBaseUrl, err := c.GetenvString("CMS_BASE_URL", "CMS Base URL")
 	if err == nil && cmsBaseUrl != "" {
