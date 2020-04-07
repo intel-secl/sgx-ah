@@ -46,14 +46,16 @@ type Configuration struct {
 	}
 	CMSBaseUrl string
 	AuthServiceUrl string
-	SchedulerTimer   int
-	Subject    struct {
-                TLSCertCommonName string
-                Organization      string
-                Country           string
-                Province          string
-                Locality          string
-        }
+	BearerToken    string
+	ShvsBaseUrl    string
+	SchedulerTimer int
+	Subject        struct {
+		TLSCertCommonName string
+		Organization      string
+		Country           string
+		Province          string
+		Locality          string
+	}
 }
 
 var mu sync.Mutex
@@ -102,64 +104,77 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 	log.Trace("config/config:SaveConfiguration() Entering")
 	defer log.Trace("config/config:SaveConfiguration() Leaving")
 
-        var err error = nil
+	var err error = nil
 
-        cmsBaseUrl, err := c.GetenvString("CMS_BASE_URL", "CMS Base URL")
-        if err == nil && cmsBaseUrl != "" {
-                conf.CMSBaseUrl = cmsBaseUrl
-        } else if conf.CMSBaseUrl == "" {
-                    log.Error("CMS_BASE_URL is not defined in environment")
-        }
+	bearerToken, err := c.GetenvString("BEARER_TOKEN", "BEARER_TOKEN")
+	if err == nil && bearerToken != "" {
+		conf.BearerToken = bearerToken
+	} else if conf.BearerToken == "" {
+		log.Error("BEARER_TOKEN is not defined in environment")
+	}
 
-        aasBaseUrl, err := c.GetenvString("AAS_BASE_URL", "AAS Base URL")
-        if err == nil && aasBaseUrl != "" {
-                conf.AuthServiceUrl = aasBaseUrl
-        } else if conf.AuthServiceUrl == "" {
-                    log.Error("AAS_BASE_URL is not defined in environment")
-        }
+	shvsBaseUrl, err := c.GetenvString("SHVS_BASE_URL", "SHVS Base URL")
+	if err == nil && shvsBaseUrl != "" {
+		conf.ShvsBaseUrl = shvsBaseUrl
+	} else if conf.ShvsBaseUrl == "" {
+		log.Error("SHVS_BASE_URL is not defined in environment")
+	}
 
+	cmsBaseUrl, err := c.GetenvString("CMS_BASE_URL", "CMS Base URL")
+	if err == nil && cmsBaseUrl != "" {
+		conf.CMSBaseUrl = cmsBaseUrl
+	} else if conf.CMSBaseUrl == "" {
+		log.Error("CMS_BASE_URL is not defined in environment")
+	}
 
-        tlsCertCN, err := c.GetenvString("SAH_TLS_CERT_CN", "SAH TLS Certificate Common Name")
-        if err == nil && tlsCertCN != "" {
-                conf.Subject.TLSCertCommonName = tlsCertCN
-        } else if conf.Subject.TLSCertCommonName == "" {
-                        conf.Subject.TLSCertCommonName = constants.DefaultSAHTlsCn
-        }
+	aasBaseUrl, err := c.GetenvString("AAS_BASE_URL", "AAS Base URL")
+	if err == nil && aasBaseUrl != "" {
+		conf.AuthServiceUrl = aasBaseUrl
+	} else if conf.AuthServiceUrl == "" {
+		log.Error("AAS_BASE_URL is not defined in environment")
+	}
 
-        certOrg, err := c.GetenvString("SAH_CERT_ORG", "SAH Certificate Organization")
-        if err == nil && certOrg != "" {
-                conf.Subject.Organization = certOrg
-        } else if conf.Subject.Organization == "" {
-                        conf.Subject.Organization = constants.DefaultSAHCertOrganization
-        }
+	tlsCertCN, err := c.GetenvString("SAH_TLS_CERT_CN", "SAH TLS Certificate Common Name")
+	if err == nil && tlsCertCN != "" {
+		conf.Subject.TLSCertCommonName = tlsCertCN
+	} else if conf.Subject.TLSCertCommonName == "" {
+		conf.Subject.TLSCertCommonName = constants.DefaultSAHTlsCn
+	}
 
-        certCountry, err := c.GetenvString("SAH_CERT_COUNTRY", "SAH Certificate Country")
-        if err == nil &&  certCountry != "" {
-                conf.Subject.Country = certCountry
-        } else if conf.Subject.Country == "" {
-                        conf.Subject.Country = constants.DefaultSAHCertCountry
-        }
+	certOrg, err := c.GetenvString("SAH_CERT_ORG", "SAH Certificate Organization")
+	if err == nil && certOrg != "" {
+		conf.Subject.Organization = certOrg
+	} else if conf.Subject.Organization == "" {
+		conf.Subject.Organization = constants.DefaultSAHCertOrganization
+	}
 
-        certProvince, err := c.GetenvString("SAH_CERT_PROVINCE", "SAH Certificate Province")
-        if err == nil && certProvince != "" {
-                conf.Subject.Province = certProvince
-        } else if err != nil || conf.Subject.Province == "" {
-                        conf.Subject.Province = constants.DefaultSAHCertProvince
-        }
+	certCountry, err := c.GetenvString("SAH_CERT_COUNTRY", "SAH Certificate Country")
+	if err == nil && certCountry != "" {
+		conf.Subject.Country = certCountry
+	} else if conf.Subject.Country == "" {
+		conf.Subject.Country = constants.DefaultSAHCertCountry
+	}
 
-        certLocality, err := c.GetenvString("SAH_CERT_LOCALITY", "SAH Certificate Locality")
-        if err == nil && certLocality != "" {
-                conf.Subject.Locality = certLocality
-        } else if conf.Subject.Locality == "" {
-                        conf.Subject.Locality = constants.DefaultSAHCertLocality
-        }
+	certProvince, err := c.GetenvString("SAH_CERT_PROVINCE", "SAH Certificate Province")
+	if err == nil && certProvince != "" {
+		conf.Subject.Province = certProvince
+	} else if err != nil || conf.Subject.Province == "" {
+		conf.Subject.Province = constants.DefaultSAHCertProvince
+	}
 
-		schedulerTimeout, err := c.GetenvInt("SAH_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
-		if err == nil && schedulerTimeout != 0 {
-			conf.SchedulerTimer = schedulerTimeout
-		} else if conf.SchedulerTimer == 0 {
-			conf.SchedulerTimer = constants.DefaultSAHSchedulerTimer
-		}
+	certLocality, err := c.GetenvString("SAH_CERT_LOCALITY", "SAH Certificate Locality")
+	if err == nil && certLocality != "" {
+		conf.Subject.Locality = certLocality
+	} else if conf.Subject.Locality == "" {
+		conf.Subject.Locality = constants.DefaultSAHCertLocality
+	}
+
+	schedulerTimeout, err := c.GetenvInt("SAH_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
+	if err == nil && schedulerTimeout != 0 {
+		conf.SchedulerTimer = schedulerTimeout
+	} else if conf.SchedulerTimer == 0 {
+		conf.SchedulerTimer = constants.DefaultSAHSchedulerTimer
+	}
 
         return conf.Save()
 }
