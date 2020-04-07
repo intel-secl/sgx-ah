@@ -17,7 +17,6 @@ const (
 	SecurityLogFile                  = LogDir + "sgx-attestation-hub-security.log"
 	HTTPLogFile                      = LogDir + "http.log"
 	ConfigFile                       = "config.yml"
-	HubTimeStamp                     = "HubSchedulerRun.txt"
 	TLSCertFile                      = "cert.pem"
 	TLSKeyFile                       = "key.pem"
 	TrustedJWTSigningCertsDir        = ConfigDir + "certs/trustedjwt/"

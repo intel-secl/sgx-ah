@@ -8,7 +8,6 @@ package scheduler
 import (
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/resource"
-	"intel/isecl/sgx-attestation-hub/resource/attestationServicePollerJob"
 	"os"
 	"os/signal"
 	"syscall"
@@ -52,16 +51,17 @@ func SAHSchedulerJob(db repository.SAHDatabase) error {
 
 	log.Info("scheduler/sah_scheduler: SAHSchedulerJob() Executing scheduled process of pulling data from attestation service and pushing to tenants")
 
-	err := attestationServicePollerJob.Execute()
-	if err != nil {
-		log.Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while running poller job")
-	}
-
+	//TODO:
+	/*
+		err := attestationServicePollerJob.execute();
+		if err != nil {
+			log.Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while running poller job")
+		}
+	*/
 	err := resource.SynchAttestationInfo(db)
 	if err != nil {
 		log.Info("got error")
 		log.Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while pushing data to the tenant")
 	}
-
 	return nil
 }
