@@ -8,6 +8,7 @@ import (
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -39,16 +40,20 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Failed to Load configuratoin"))
 	}
 
-	getSahUrl := conf.ShvsBaseUrl + "hosts"
 	bearerToken := conf.BearerToken
-	var resp, err = GetApi("GET", getSahUrl, bearerToken)
+	getSHVSUrl := conf.ShvsBaseUrl + "hosts"
+	SHVSUrl, parseErr := url.Parse(getSHVSUrl)
+	if parseErr != nil {
+		return errors.Wrap(parseErr, "FetchAllHostsFromHVS() : Configured SHVS URL is malformed")
+	}
+	var resp, err = GetApi("GET", SHVSUrl.String(), bearerToken)
 
 	if resp == nil {
-		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: nil response recieved"))
+		return errors.Wrap(err,"FetchAllHostsFromHVS: nil response received")
 	} else if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Invalid status code received:%d", resp.StatusCode))
 	} else if err != nil {
-		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Error :", err))
+		return errors.Wrap(err,"FetchAllHostsFromHVS: Error fetching hosts from HVS")
 	}
 
 	var hvsResponse HostBasicInfoArray

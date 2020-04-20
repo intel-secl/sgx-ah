@@ -1,7 +1,7 @@
 package attestationServicePollerJob
 
 import (
-	clog "intel/isecl/lib/common/log"
+	clog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository"

@@ -6,13 +6,16 @@ package config
 
 import (
 	"errors"
+	errorLog "github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	commLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/setup"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"os"
 	"path"
 	"sync"
-	"intel/isecl/lib/common/setup"
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"time"
 )
 
 // should move this into lib common, as its duplicated across SAH and SAH
@@ -22,6 +25,7 @@ import (
 type Configuration struct {
 	configFile string
 	Port       int
+	CmsTlsCertDigest string
 	Postgres   struct {
 		DBName   string
 		Username string
@@ -31,8 +35,9 @@ type Configuration struct {
 		SSLMode  string
 		SSLCert  string
 	}
-	AAS_API_URL  string
-	LogLevel log.Level
+	LogMaxLength	int
+	LogEnableStdout bool
+	LogLevel        log.Level
 
 	AuthDefender struct {
 		MaxAttempts         int
@@ -49,13 +54,17 @@ type Configuration struct {
 	BearerToken    string
 	ShvsBaseUrl    string
 	SchedulerTimer int
-	Subject        struct {
+	Subject struct {
 		TLSCertCommonName string
-		Organization      string
-		Country           string
-		Province          string
-		Locality          string
 	}
+	TLSKeyFile        string
+	TLSCertFile       string
+	CertSANList       string
+	ReadTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
 }
 
 var mu sync.Mutex
@@ -106,6 +115,14 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 
 	var err error = nil
 
+	tlsCertDigest, err := c.GetenvString(constants.CmsTlsCertDigestEnv, "TLS certificate digest")
+	if err == nil && tlsCertDigest != "" {
+		conf.CmsTlsCertDigest = tlsCertDigest
+	} else if conf.CmsTlsCertDigest == "" {
+		commLog.GetDefaultLogger().Error("CMS_TLS_CERT_SHA384 is not defined in environment")
+		return errorLog.Wrap(errors.New("CMS_TLS_CERT_SHA384 is not defined in environment"), "SaveConfiguration() ENV variable not found")
+	}
+
 	bearerToken, err := c.GetenvString("BEARER_TOKEN", "BEARER_TOKEN")
 	if err == nil && bearerToken != "" {
 		conf.BearerToken = bearerToken
@@ -124,14 +141,16 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 	if err == nil && cmsBaseUrl != "" {
 		conf.CMSBaseUrl = cmsBaseUrl
 	} else if conf.CMSBaseUrl == "" {
-		log.Error("CMS_BASE_URL is not defined in environment")
+		commLog.GetDefaultLogger().Error("CMS_BASE_URL is not defined in environment")
+		return errorLog.Wrap(errors.New("CMS_BASE_URL is not defined in environment"), "SaveConfiguration() ENV variable not found")
 	}
 
-	aasBaseUrl, err := c.GetenvString("AAS_BASE_URL", "AAS Base URL")
-	if err == nil && aasBaseUrl != "" {
-		conf.AuthServiceUrl = aasBaseUrl
+	aasApiUrl, err := c.GetenvString("AAS_API_URL", "AAS API URL")
+	if err == nil && aasApiUrl != "" {
+		conf.AuthServiceUrl = aasApiUrl
 	} else if conf.AuthServiceUrl == "" {
-		log.Error("AAS_BASE_URL is not defined in environment")
+		commLog.GetDefaultLogger().Error("AAS_API_URL is not defined in environment")
+		return errorLog.Wrap(errors.New("AAS_API_URL is not defined in environment"), "SaveConfiguration() ENV variable not found")
 	}
 
 	tlsCertCN, err := c.GetenvString("SAH_TLS_CERT_CN", "SAH TLS Certificate Common Name")
@@ -141,32 +160,25 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		conf.Subject.TLSCertCommonName = constants.DefaultSAHTlsCn
 	}
 
-	certOrg, err := c.GetenvString("SAH_CERT_ORG", "SAH Certificate Organization")
-	if err == nil && certOrg != "" {
-		conf.Subject.Organization = certOrg
-	} else if conf.Subject.Organization == "" {
-		conf.Subject.Organization = constants.DefaultSAHCertOrganization
+	tlsKeyPath, err := c.GetenvString("KEY_PATH", "Path of file where TLS key needs to be stored")
+	if err == nil && tlsKeyPath != "" {
+		conf.TLSKeyFile = tlsKeyPath
+	} else if conf.TLSKeyFile == "" {
+		conf.TLSKeyFile = constants.DefaultTLSKeyFile
 	}
 
-	certCountry, err := c.GetenvString("SAH_CERT_COUNTRY", "SAH Certificate Country")
-	if err == nil && certCountry != "" {
-		conf.Subject.Country = certCountry
-	} else if conf.Subject.Country == "" {
-		conf.Subject.Country = constants.DefaultSAHCertCountry
+	tlsCertPath, err := c.GetenvString("CERT_PATH", "Path of file/directory where TLS certificate needs to be stored")
+	if err == nil && tlsCertPath != "" {
+		conf.TLSCertFile = tlsCertPath
+	} else if conf.TLSCertFile == "" {
+		conf.TLSCertFile = constants.DefaultTLSCertFile
 	}
 
-	certProvince, err := c.GetenvString("SAH_CERT_PROVINCE", "SAH Certificate Province")
-	if err == nil && certProvince != "" {
-		conf.Subject.Province = certProvince
-	} else if err != nil || conf.Subject.Province == "" {
-		conf.Subject.Province = constants.DefaultSAHCertProvince
-	}
-
-	certLocality, err := c.GetenvString("SAH_CERT_LOCALITY", "SAH Certificate Locality")
-	if err == nil && certLocality != "" {
-		conf.Subject.Locality = certLocality
-	} else if conf.Subject.Locality == "" {
-		conf.Subject.Locality = constants.DefaultSAHCertLocality
+	sanList, err := c.GetenvString("SAN_LIST", "SAN list for TLS")
+	if err == nil && sanList != "" {
+		conf.CertSANList = sanList
+	} else if conf.CertSANList == "" {
+		conf.CertSANList = constants.DefaultSAHTlsSan
 	}
 
 	schedulerTimeout, err := c.GetenvInt("SAH_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")

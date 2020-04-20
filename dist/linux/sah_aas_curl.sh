@@ -10,7 +10,7 @@ unset http_proxy
 
 #Get the value of AAS IP address and port. Default vlue is also provided.
 aas_hostname=${AAS_URL:-"https://10.105.168.27:8443"}
-CURL_OPTS="-s --insecure"
+CURL_OPTS="-s -k"
 IPADDR="10.105.168.27,127.0.0.1,localhost"
 CN="SGX AH TLS Certificate"
 
@@ -49,7 +49,6 @@ EOF
 
 curl $CURL_OPTS -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${Bearer_token}" --data @$tmpdir/user.json -o $tmpdir/user_response.json -w "%{http_code}" $aas_hostname/aas/users > $tmpdir/createsahuser-response.status
 
-
 local actual_status=$(cat $tmpdir/createsahuser-response.status)
 if [ $actual_status -ne 201 ]; then
 	local response_mesage=$(cat $tmpdir/user_response.json)
@@ -73,7 +72,6 @@ fi
 #cms role(sah will create these roles where CN=SAH), getroles(api in aas that is to be map with), keyTransfer, keyCrud
 create_user_roles() {
 
-
 cat > $tmpdir/roles.json << EOF
 {
 	"service": "$1",
@@ -94,7 +92,6 @@ if [ $actual_status -ne 201 ]; then
 fi
 
 if [ -s $tmpdir/role_response.json ]; then
-	#jq < $tmpdir/role_response.json
 	role_id=$(jq -r '.role_id' < $tmpdir/role_response.json)
 fi
 echo "$role_id"
@@ -139,7 +136,7 @@ do
 	eval $api
     	status=$?
     if [ $status -ne 0 ]; then
-        echo "AAS details creation stopped.: $api"
+        echo "SAH-AAS User/Roles creation failed.: $api"
         break;
     fi
 done
@@ -151,7 +148,7 @@ if [ $status -eq 2 ]; then
     echo "SAH Setup for AAS-CMS already exists in AAS Database: No action will be done"
 fi
 
-#Get Token for SAH USER and configure it is sah config to be used by JAVA Code.
+#Get Token for SAH USER and configure it in sah config.
 curl $CURL_OPTS -X POST -H "Content-Type: application/json" -H "Accept: application/jwt" --data @$tmpdir/user.json -o $tmpdir/sah_token-response.json -w "%{http_code}" $aas_hostname/aas/token > $tmpdir/getsahusertoken-response.status
 
 status=$(cat $tmpdir/getsahusertoken-response.status)

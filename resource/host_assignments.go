@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"intel/isecl/lib/common/validation"
+	"intel/isecl/lib/common/v2/validation"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
 	"net/http"

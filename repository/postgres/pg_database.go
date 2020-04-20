@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
-	 commLog "intel/isecl/lib/common/log"
+	 commLog "intel/isecl/lib/common/v2/log"
 	"io/ioutil"
 	"strings"
 	"time"

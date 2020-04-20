@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"flag"
 	"fmt"
+	"intel/isecl/lib/common/v2/middleware"
 	"intel/isecl/sgx-attestation-hub/resource/scheduler"
 	"io"
 	"io/ioutil"
@@ -19,7 +20,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path"
+	"os/user"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -27,13 +29,14 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"intel/isecl/lib/common/crypt"
-	e "intel/isecl/lib/common/exec"
-	commLog "intel/isecl/lib/common/log"
-	commLogInt "intel/isecl/lib/common/log/setup"
-	cos "intel/isecl/lib/common/os"
-	"intel/isecl/lib/common/setup"
-	"intel/isecl/lib/common/validation"
+	"intel/isecl/lib/common/v2/crypt"
+	e "intel/isecl/lib/common/v2/exec"
+	commLog "intel/isecl/lib/common/v2/log"
+	commLogMsg "intel/isecl/lib/common/v2/log/message"
+	commLogInt "intel/isecl/lib/common/v2/log/setup"
+	cos "intel/isecl/lib/common/v2/os"
+	"intel/isecl/lib/common/v2/setup"
+	"intel/isecl/lib/common/v2/validation"
 	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository"
@@ -57,6 +60,7 @@ type App struct {
 	ConsoleWriter  io.Writer
 	LogWriter      io.Writer
 	HTTPLogWriter  io.Writer
+	SecLogWriter   io.Writer
 }
 
 func (a *App) printUsage() {
@@ -76,6 +80,12 @@ func (a *App) printUsage() {
 	fmt.Fprintln(w, "    version          Show the version of sgx-attestation-hub")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Avaliable Tasks for setup:")
+	fmt.Fprintln(w, "    all                       Runs all setup tasks")
+	fmt.Fprintln(w, "                              Required env variables:")
+	fmt.Fprintln(w, "                                  - get required env variables from all the setup tasks")
+	fmt.Fprintln(w, "                              Optional env variables:")
+	fmt.Fprintln(w, "                                  - get optional env variables from all the setup tasks")
+	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "    sgx-attestation-hub setup database [-force] [--arguments=<argument_value>]")
 	fmt.Fprintln(w, "        - Avaliable arguments are:")
 	fmt.Fprintln(w, "            - db-host    alternatively, set environment variable SAH_DB_HOSTNAME")
@@ -94,21 +104,28 @@ func (a *App) printUsage() {
 	fmt.Fprintln(w, "                         alternatively, set environment variable SAH_DB_SSLCERTSRC")
 	fmt.Fprintln(w, "        - Run this command with environment variable SAH_DB_REPORT_MAX_ROWS and")
 	fmt.Fprintln(w, "          SAH_DB_REPORT_NUM_ROTATIONS can update db rotation arguments")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "    download_ca_cert      Download CMS root CA certificate")
+	fmt.Fprintln(w, "                          - Option [--force] overwrites any existing files, and always downloads new root CA cert")
+	fmt.Fprintln(w, "                          Required env variables specific to setup task are:")
+	fmt.Fprintln(w, "                              - CMS_BASE_URL=<url>                                : for CMS API url")
+	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>    : to ensure that SAH is talking to the right CMS instance")
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "    download_cert TLS     Generates Key pair and CSR, gets it signed from CMS")
+	fmt.Fprintln(w, "                          - Option [--force] overwrites any existing files, and always downloads newly signed TLS cert")
+	fmt.Fprintln(w, "                          Required env variable if SAH_NOSETUP=true or variable not set in config.yml:")
+	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>      : to ensure that SAH is talking to the right CMS instance")
+	fmt.Fprintln(w, "                          Required env variables specific to setup task are:")
+	fmt.Fprintln(w, "                              - CMS_BASE_URL=<url>               : for CMS API url")
+	fmt.Fprintln(w, "                              - BEARER_TOKEN=<token>             : for authenticating with CMS")
+	fmt.Fprintln(w, "                              - SAN_LIST=<san>                   : list of hosts which needs access to service")
+	fmt.Fprintln(w, "                          Optional env variables specific to setup task are:")
+	fmt.Fprintln(w, "                              - KEY_PATH=<key_path>              : Path of file where TLS key needs to be stored")
+	fmt.Fprintln(w, "                              - CERT_PATH=<cert_path>            : Path of file/directory where TLS certificate needs to be stored")
+	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "    sgx-attestation-hub setup server [--port=<port>]")
 	fmt.Fprintln(w, "        - Setup http server on <port>")
 	fmt.Fprintln(w, "        - Environment variable SAH_PORT=<port> can be set alternatively")
-	fmt.Fprintln(w, "    sgx-attestation-hub setup tls [--force] [--host_names=<host_names>]")
-	fmt.Fprintln(w, "        - Use the key and certificate provided in /etc/threat-detection if files exist")
-	fmt.Fprintln(w, "        - Otherwise create its own self-signed TLS keypair in /etc/sgx-attestation-hub for quality of life")
-	fmt.Fprintln(w, "        - Option [--force] overwrites any existing files, and always generate self-signed keypair")
-	fmt.Fprintln(w, "        - Argument <host_names> is a list of host names used by local machine, seperated by comma")
-	fmt.Fprintln(w, "        - Environment variable SAH_TLS_HOST_NAMES=<host_names> can be set alternatively")
-	fmt.Fprintln(w, "    sgx-attestation-hub setup admin [--user=<username>] [--pass=<password>]")
-	fmt.Fprintln(w, "        - Environment variable SAH_ADMIN_USERNAME=<username> can be set alternatively")
-	fmt.Fprintln(w, "        - Environment variable SAH_ADMIN_PASSWORD=<password> can be set alternatively")
-	fmt.Fprintln(w, "    sgx-attestation-hub setup reghost [--user=<username>] [--pass=<password>]")
-	fmt.Fprintln(w, "        - Environment variable SAH_REG_HOST_USERNAME=<username> can be set alternatively")
-	fmt.Fprintln(w, "        - Environment variable SAH_REG_HOST_PASSWORD=<password> can be set alternatively")
 	fmt.Fprintln(w, "")
 }
 
@@ -190,24 +207,27 @@ func (a *App) runDirPath() string {
 var log = commLog.GetDefaultLogger()
 var slog = commLog.GetSecurityLogger()
 
-var secLogFile *os.File
-var defaultLogFile *os.File
+func (a *App) configureLogs(stdOut, logFile bool) {
 
-func (a *App) configureLogs(isStdOut bool, isFileOut bool) {
 	var ioWriterDefault io.Writer
-	ioWriterDefault = defaultLogFile
-	if isStdOut && isFileOut {
-		ioWriterDefault = io.MultiWriter(os.Stdout, defaultLogFile)
-	} else if isStdOut && !isFileOut {
-		ioWriterDefault = os.Stdout
+	ioWriterDefault = a.LogWriter
+
+	if stdOut {
+		if logFile {
+			ioWriterDefault = io.MultiWriter(os.Stdout, a.LogWriter)
+		} else {
+			ioWriterDefault = os.Stdout
+		}
 	}
 
-	ioWriterSecurity := io.MultiWriter(ioWriterDefault, secLogFile)
-	commLogInt.SetLogger(commLog.DefaultLoggerName, a.configuration().LogLevel, nil, ioWriterDefault, false)
-	commLogInt.SetLogger(commLog.SecurityLoggerName, a.configuration().LogLevel, nil, ioWriterSecurity, false)
+	ioWriterSecurity := io.MultiWriter(ioWriterDefault, a.SecLogWriter)
 
-	slog.Trace("sec log initiated")
-	log.Trace("loggers setup finished")
+	f := commLog.LogFormatter{MaxLength: a.configuration().LogMaxLength}
+	commLogInt.SetLogger(commLog.DefaultLoggerName, a.configuration().LogLevel, &f, ioWriterDefault, false)
+	commLogInt.SetLogger(commLog.SecurityLoggerName, a.configuration().LogLevel, &f, ioWriterSecurity, false)
+
+	slog.Info(commLogMsg.LogInit)
+	log.Info(commLogMsg.LogInit)
 }
 
 func (a *App) Run(args []string) error {
@@ -217,35 +237,12 @@ func (a *App) Run(args []string) error {
 		os.Exit(1)
 	}
 
-	var err error
-	secLogFile, err = os.OpenFile(constants.SecurityLogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
-	if err != nil {
-		log.Errorf("Could not open Security log file" + err.Error())
-		return err
-	}
-	os.Chmod(constants.SecurityLogFile, 0664)
-	defaultLogFile, err = os.OpenFile(constants.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
-	if err != nil {
-		log.Errorf("Could not open default log file" + err.Error())
-		return err
-	}
-	os.Chmod(constants.LogFile, 0664)
-
-	defer secLogFile.Close()
-	defer defaultLogFile.Close()
-
-	isStdOut := false
-	isSAHConsoleEnabled := os.Getenv("SAH_ENABLE_CONSOLE_LOG")
-	if isSAHConsoleEnabled == "true" {
-		isStdOut = true
-	}
-	a.configureLogs(isStdOut, true)
-
 	cmd := args[1]
 	switch cmd {
 	default:
 		a.printUsage()
-		return errors.New("Unrecognized command: " + args[1])
+		fmt.Fprintf(os.Stderr, "Unrecognized command: %s\n", args[1])
+		os.Exit(1)
 	case "list":
 		if len(args) < 3 {
 			a.printUsage()
@@ -253,38 +250,33 @@ func (a *App) Run(args []string) error {
 		}
 		return a.PrintDirFileContents(args[2])
 	case "tlscertsha384":
-		a.configureLogs(true, false)
-		hash, err := crypt.GetCertHexSha384(path.Join(a.configDir(), constants.TLSCertFile))
+		a.configureLogs(a.configuration().LogEnableStdout, true)
+		hash, err := crypt.GetCertHexSha384(config.Global().TLSCertFile)
 		if err != nil {
 			fmt.Println(err.Error())
-			return err
+			return errors.Wrap(err, "app:Run() Could not derive tls certificate digest")
 		}
 		fmt.Println(hash)
 		return nil
 	case "run":
-		a.configureLogs(true, true)
+		a.configureLogs(a.configuration().LogEnableStdout, true)
 		if err := a.startServer(); err != nil {
 			fmt.Fprintln(os.Stderr, "Error: daemon did not start - ", err.Error())
 			// wait some time for logs to flush - otherwise, there will be no entry in syslog
 			time.Sleep(10 * time.Millisecond)
 			return errors.Wrap(err, "app:Run() Error starting sgx-attestation-hub service")
 		}
-	case "-help":
-		fallthrough
-	case "--h":
-		fallthrough
-	case "--help":
-		fallthrough
-	case "help":
+	case "-h", "--help":
 		a.printUsage()
+		return nil
 	case "start":
-		a.configureLogs(false, true)
+		a.configureLogs(a.configuration().LogEnableStdout, true)
 		return a.start()
 	case "stop":
-		a.configureLogs(true, false)
+		a.configureLogs(a.configuration().LogEnableStdout, false)
 		return a.stop()
 	case "status":
-		a.configureLogs(true, false)
+		a.configureLogs(a.configuration().LogEnableStdout, false)
 		return a.status()
 	case "uninstall":
 		var keepConfig bool
@@ -294,9 +286,10 @@ func (a *App) Run(args []string) error {
 		log.Info("app:Run() Uninstalled SGX Attestation Hub Service")
 		os.Exit(0)
 	case "version":
-		fmt.Fprintf(a.consoleWriter(), "SGX Attestation Hub Service %s-%s\n", version.Version, version.GitHash)
+		fmt.Fprintf(a.consoleWriter(), "SGX Attestation Hub Service %s-%s\nBuilt %s\n", version.Version, version.GitHash, version.BuildDate)
+		return nil
 	case "setup":
-		a.configureLogs(false, true)
+		a.configureLogs(a.configuration().LogEnableStdout, true)
 		var context setup.Context
 		if len(args) <= 2 {
 			a.printUsage()
@@ -304,13 +297,11 @@ func (a *App) Run(args []string) error {
 			os.Exit(1)
 		}
 
-		if args[2] != "admin" &&
-			args[2] != "download_ca_cert" &&
+		if args[2] != "download_ca_cert" &&
 			args[2] != "download_cert" &&
 			args[2] != "database" &&
 			args[2] != "server" &&
-			args[2] != "all" &&
-			args[2] != "tls" {
+			args[2] != "all" {
 			a.printUsage()
 			return errors.New("No such setup task")
 		}
@@ -324,7 +315,7 @@ func (a *App) Run(args []string) error {
 		err = a.Config.SaveConfiguration(context)
 		if err != nil {
 			fmt.Println("Error saving configuration: " + err.Error())
-			return errors.New("Configuration save ends with error")
+			os.Exit(1)
 		}
 
 		task := strings.ToLower(args[2])
@@ -341,23 +332,20 @@ func (a *App) Run(args []string) error {
 					Flags:         flags,
 					CmsBaseURL:    a.Config.CMSBaseUrl,
 					CaCertDirPath: constants.TrustedCAsStoreDir,
+					TrustedTlsCertDigest: a.Config.CmsTlsCertDigest,
 					ConsoleWriter: os.Stdout,
 				},
 				setup.Download_Cert{
 					Flags:              flags,
-					KeyFile:            path.Join(a.configDir(), constants.TLSKeyFile),
-					CertFile:           path.Join(a.configDir(), constants.TLSCertFile),
+					KeyFile:            a.Config.TLSKeyFile,
+					CertFile:           a.Config.TLSCertFile,
 					KeyAlgorithm:       constants.DefaultKeyAlgorithm,
 					KeyAlgorithmLength: constants.DefaultKeyAlgorithmLength,
 					CmsBaseURL:         a.Config.CMSBaseUrl,
 					Subject: pkix.Name{
-						Country:      []string{a.Config.Subject.Country},
-						Organization: []string{a.Config.Subject.Organization},
-						Locality:     []string{a.Config.Subject.Locality},
-						Province:     []string{a.Config.Subject.Province},
 						CommonName:   a.Config.Subject.TLSCertCommonName,
 					},
-					SanList:       constants.DefaultSAHTlsSan,
+					SanList:       a.Config.CertSANList,
 					CertType:      "TLS",
 					CaCertsDir:    constants.TrustedCAsStoreDir,
 					BearerToken:   "",
@@ -368,29 +356,10 @@ func (a *App) Run(args []string) error {
 					Config:        a.configuration(),
 					ConsoleWriter: os.Stdout,
 				},
-				tasks.Admin{
-					Flags: flags,
-					DatabaseFactory: func() (repository.SAHDatabase, error) {
-						pg := &a.configuration().Postgres
-						p, err := postgres.Open(pg.Hostname, pg.Port, pg.DBName, pg.Username, pg.Password, pg.SSLMode, pg.SSLCert)
-						if err != nil {
-							log.WithError(err).Error("failed to open postgres connection for setup task")
-							return nil, err
-						}
-						p.Migrate()
-						return p, nil
-					},
-					ConsoleWriter: os.Stdout,
-				},
 				tasks.Server{
 					Flags:         flags,
 					Config:        a.configuration(),
 					ConsoleWriter: os.Stdout,
-				},
-				tasks.Root_Ca{
-					Flags:         flags,
-					ConsoleWriter: os.Stdout,
-					Config:        a.configuration(),
 				},
 				tasks.CreateEncryptionKey{
 					Flags: flags,
@@ -405,61 +374,44 @@ func (a *App) Run(args []string) error {
 			err = setupRunner.RunTasks(task)
 		}
 		if err != nil {
-			fmt.Println("Error running setup: ", err)
+			log.WithError(err).Error("Error running setup")
+			fmt.Fprintf(os.Stderr, "Error running setup: %s\n", err)
 			return errors.Wrap(err, "app:Run() Error running setup")
 		}
-	}
-	return nil
-}
 
-func (a *App) retrieveJWTSigningCerts() error {
-	log.Trace("app:retrieveJWTSigningCerts() Entering")
-	defer log.Trace("app:retrieveJWTSigningCerts() Leaving")
+		sahUser, err := user.Lookup(constants.SAHUserName)
+		if err != nil {
+			return errors.Wrapf(err,"Could not find user '%s'", constants.SAHUserName)
+		}
 
-	c := a.configuration()
-	log.WithField("AuthServiceUrl", c.AuthServiceUrl).Debug("URL dump")
-	url := c.AuthServiceUrl + "noauth/jwt-certificates"
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("accept", "application/x-pem-file")
-	rootCaCertPems, err := cos.GetDirFileContents(constants.RootCADirPath, "*.pem")
-	if err != nil {
-		return err
-	}
+		uid, err := strconv.Atoi(sahUser.Uid)
+		if err != nil {
+			return errors.Wrapf(err,"Could not parse sah user uid '%s'", sahUser.Uid)
+		}
 
-	// Get the SystemCertPool, continue with an empty pool on error
-	rootCAs, _ := x509.SystemCertPool()
-	if rootCAs == nil {
-		rootCAs = x509.NewCertPool()
-	}
-	for _, rootCACert := range rootCaCertPems {
-		if ok := rootCAs.AppendCertsFromPEM(rootCACert); !ok {
-			return err
+		gid, err := strconv.Atoi(sahUser.Gid)
+		if err != nil {
+			return errors.Wrapf(err,"Could not parse sah user gid '%s'", sahUser.Gid)
+		}
+
+		//Change the file ownership to sah user
+
+		err = cos.ChownR(constants.ConfigDir, uid, gid)
+		if err != nil {
+			return errors.Wrap(err,"Error while changing file ownership")
+		}
+		if task == "download_cert" {
+			err = os.Chown(a.Config.TLSKeyFile, uid, gid)
+			if err != nil {
+				return errors.Wrap(err, "Error while changing ownership of TLS Key file")
+			}
+
+			err = os.Chown(a.Config.TLSCertFile, uid, gid)
+			if err != nil {
+				return errors.Wrap(err, "Error while changing ownership of TLS Cert file")
+			}
 		}
 	}
-
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: false,
-				RootCAs:            rootCAs,
-			},
-		},
-	}
-
-	res, err := httpClient.Do(req)
-	if err != nil {
-		log.WithError(err).Debug("Could not retrieve jwt certificate")
-		return fmt.Errorf("Could not retrieve jwt certificate")
-	}
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-	err = crypt.SavePemCertWithShortSha1FileName(body, constants.TrustedJWTSigningCertsDir)
-	if err != nil {
-		fmt.Println("Could not store Certificate")
-		return fmt.Errorf("Certificate setup: %v", err)
-	}
-
-	log.WithField("Retrieve JWT cert", "compledted").Debug("successfully")
 	return nil
 }
 
@@ -468,6 +420,7 @@ func (a *App) startServer() error {
 	defer log.Trace("app:startServer() Leaving")
 
 	c := a.configuration()
+	log.Info("Starting SAH server")
 
 	// verify the database connection. If this does not succeed then we want to exit right here
 	// the Open method has a retry operation that takes a long time
@@ -484,15 +437,14 @@ func (a *App) startServer() error {
 		return err
 	}
 	defer sahDB.Close()
+	log.Info("Migrating Database")
 	sahDB.Migrate()
 
-	// Create public routes that does not need any authentication
 	r := mux.NewRouter()
+	r.SkipClean(true)
 
 	sr := r.PathPrefix("/sgx-ah/v1/").Subrouter()
-	//var cacheTime, _ = time.ParseDuration(constants.JWTCertsCacheTime)
-	//sr.Use(middleware.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, fnGetJwtCerts, cacheTime))
-	//sr.Use(cmw.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, a.retrieveJWTSigningCerts))
+	sr.Use(middleware.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, fnGetJwtCerts, time.Minute*constants.DefaultJwtValidateCacheKeyMins))
 	func(setters ...func(*mux.Router, repository.SAHDatabase)) {
 		for _, setter := range setters {
 			setter(sr, sahDB)
@@ -518,19 +470,24 @@ func (a *App) startServer() error {
 		Handler:   handlers.RecoveryHandler(handlers.RecoveryLogger(httpLog), handlers.PrintRecoveryStack(true))(handlers.CombinedLoggingHandler(a.httpLogWriter(), r)),
 		ErrorLog:  httpLog,
 		TLSConfig: tlsconfig,
+		ReadTimeout:       c.ReadTimeout,
+		ReadHeaderTimeout: c.ReadHeaderTimeout,
+		WriteTimeout:      c.WriteTimeout,
+		IdleTimeout:       c.IdleTimeout,
+		MaxHeaderBytes:    c.MaxHeaderBytes,
 	}
 
 	// dispatch web server go routine
 	go func() {
-		tlsCert := path.Join(a.configDir(), constants.TLSCertFile)
-		tlsKey := path.Join(a.configDir(), constants.TLSKeyFile)
+		tlsCert := config.Global().TLSCertFile
+		tlsKey := config.Global().TLSKeyFile
 		if err := h.ListenAndServeTLS(tlsCert, tlsKey); err != nil {
 			log.WithError(err).Info("Failed to start HTTPS server")
 			stop <- syscall.SIGTERM
 		}
 	}()
 
-	fmt.Fprintln(a.consoleWriter(), "Auth Service is running")
+	slog.Info(commLogMsg.ServiceStart)
 	// TODO dispatch Service status checker goroutine
 	<-stop
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -539,6 +496,7 @@ func (a *App) startServer() error {
 		log.WithError(err).Info("Failed to gracefully shutdown webserver")
 		return err
 	}
+	slog.Info(commLogMsg.ServiceStop)
 	return nil
 }
 
@@ -549,7 +507,7 @@ func (a *App) start() error {
 	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl start sgx-attestation-hub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
-		return errors.Wrap(err, "app:start() Could not locate systemctl to start application service")
+		return err
 	}
 	return syscall.Exec(systemctl, []string{"systemctl", "start", "sgx-attestation-hub"}, os.Environ())
 }
@@ -561,7 +519,7 @@ func (a *App) stop() error {
 	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl stop sgx-attestation-hub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
-		return errors.Wrap(err, "app:stop() Could not locate systemctl to stop application service")
+		return err
 	}
 	return syscall.Exec(systemctl, []string{"systemctl", "stop", "sgx-attestation-hub"}, os.Environ())
 }
@@ -573,7 +531,7 @@ func (a *App) status() error {
 	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl status sgx-attestation-hub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
-		return errors.Wrap(err, "app:status() Could not locate systemctl to check status of application service")
+		return err
 	}
 	return syscall.Exec(systemctl, []string{"systemctl", "status", "sgx-attestation-hub"}, os.Environ())
 }
@@ -647,7 +605,7 @@ func validateCmdAndEnv(env_names_cmd_opts map[string]string, flags *flag.FlagSet
 	if valid_err != nil && missing != nil {
 		for _, m := range missing {
 			if cmd_f := flags.Lookup(env_names_cmd_opts[m]); cmd_f == nil {
-				return errors.Wrap(valid_err, "app:validateCmdAndEnv() Insufficient arguments")
+				return errors.New("Insufficient arguments")
 			}
 		}
 	}
@@ -691,40 +649,6 @@ func validateSetupArgs(cmd string, args []string) error {
 		fs.String("db-sslmode", "", "Database SSL Mode")
 		fs.String("db-sslcert", "", "Database SSL Cert Destination")
 		fs.String("db-sslcertsrc", "", "Database SSL Cert Source File")
-
-		err := fs.Parse(args)
-		if err != nil {
-			return fmt.Errorf("Fail to parse arguments: %s", err.Error())
-		}
-		return validateCmdAndEnv(env_names_cmd_opts, fs)
-
-	case "admin":
-
-		env_names_cmd_opts := map[string]string{
-			"SAH_ADMIN_USERNAME": "user",
-			"SAH_ADMIN_PASSWORD": "pass",
-		}
-
-		fs = flag.NewFlagSet("admin", flag.ContinueOnError)
-		fs.String("user", "", "Username for admin authentication")
-		fs.String("pass", "", "Password for admin authentication")
-
-		err := fs.Parse(args)
-		if err != nil {
-			return errors.Wrap(err, "app:validateCmdAndEnv() Fail to parse arguments")
-		}
-		return validateCmdAndEnv(env_names_cmd_opts, fs)
-
-	case "reghost":
-
-		env_names_cmd_opts := map[string]string{
-			"SAH_REG_HOST_USERNAME": "user",
-			"SAH_REG_HOST_PASSWORD": "pass",
-		}
-
-		fs = flag.NewFlagSet("reghost", flag.ContinueOnError)
-		fs.String("user", "", "Username for host registration")
-		fs.String("pass", "", "Password for host registration")
 
 		err := fs.Parse(args)
 		if err != nil {
@@ -790,16 +714,16 @@ func (a *App) DatabaseFactory() (repository.SAHDatabase, error) {
 	return p, nil
 }
 
-/* Fetch JWT certificate from AAS
+//Fetch JWT certificate from AAS
 func fnGetJwtCerts() error {
 	log.Trace("server:fnGetJwtCerts() Entering")
 	defer log.Trace("server:fnGetJwtCerts() Leaving")
 
-	var c config.Configuration
-	if !strings.HasSuffix(c.AAS_API_URL, "/") {
-		c.AAS_API_URL = c.AAS_API_URL + "/"
+	c := config.Global()
+	if !strings.HasSuffix(c.AuthServiceUrl, "/") {
+		c.AuthServiceUrl = c.AuthServiceUrl + "/"
 	}
-	url := c.AAS_API_URL + "noauth/jwt-certificates"
+	url := c.AuthServiceUrl + "noauth/jwt-certificates"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return errors.Wrap(err, "server:fnGetJwtCerts() Could not create http request")
@@ -839,12 +763,5 @@ func fnGetJwtCerts() error {
 	if err != nil {
 		return errors.Wrap(err, "server:fnGetJwtCerts() Could not store Certificate")
 	}
-	return nil
-}*/
-
-//To be implemented if JWT certificate is needed from any other services
-func fnGetJwtCerts() error {
-	log.Trace("resource/service:fnGetJwtCerts() Entering")
-	defer log.Trace("resource/service:fnGetJwtCerts() Leaving")
 	return nil
 }

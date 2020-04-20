@@ -7,6 +7,8 @@ package resource
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"intel/isecl/lib/clients/v2"
+	"intel/isecl/sgx-attestation-hub/constants"
 	"io"
 	"net/http"
 	"os"
@@ -14,7 +16,10 @@ import (
 
 func GetApi(requestType string, url string, bearerToken string) (*http.Response, error) {
 
-	client := &http.Client{}
+	client, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
+	if err != nil {
+		return nil, errors.Wrap(err,"GetApi : Error in getting client object")
+	}
 
 	req, err := http.NewRequest(requestType, url, nil)
 	if err != nil {
@@ -29,7 +34,7 @@ func GetApi(requestType string, url string, bearerToken string) (*http.Response,
 	log.Debug("FetchAllHostsFromHVS: Status: ", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("GetApi: Invalid status code received:%d", resp.StatusCode, resp.Body, resp))
+		return nil, errors.New(fmt.Sprintf("GetApi: Invalid status code received:%d", resp.StatusCode))
 	}
 	return resp, nil
 }

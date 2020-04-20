@@ -11,8 +11,8 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	cLog "intel/isecl/lib/common/log"
-	csetup "intel/isecl/lib/common/setup"
+	cLog "intel/isecl/lib/common/v2/log"
+	csetup "intel/isecl/lib/common/v2/setup"
 	"intel/isecl/sgx-attestation-hub/constants"
 
 	"os"

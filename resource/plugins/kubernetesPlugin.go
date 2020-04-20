@@ -13,7 +13,7 @@ import (
 	"encoding/pem"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/pkcs12"
-	clog "intel/isecl/lib/common/log"
+	clog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/types"
 	"io/ioutil"

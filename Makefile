@@ -1,13 +1,12 @@
 GITTAG := $(shell git describe --tags --abbrev=0 2> /dev/null)
-#GITCOMMIT := $(shell git describe --always)
-GITCOMMIT := e991de2 
-GITCOMMITDATE := $(shell git log -1 --date=short --pretty=format:%cd)
+GITCOMMIT := $(shell git describe --always)
 VERSION := $(or ${GITTAG}, v0.0.0)
+BUILDDATE := $(shell TZ=UTC date +%Y-%m-%dT%H:%M:%S%z)
 
 .PHONY: sgx-attestation-hub installer docker all test clean
 
 sgx-attestation-hub:
-	env GOOS=linux go build -ldflags "-X intel/isecl/sgx-attestation-hub/version.Version=$(VERSION) -X intel/isecl/sgx-attestation-hub/version.GitHash=$(GITCOMMIT)" -o out/sgx-attestation-hub
+	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X intel/isecl/scs/version.BuildDate=$(BUILDDATE) -X intel/isecl/sgx-attestation-hub/version.Version=$(VERSION) -X intel/isecl/sgx-attestation-hub/version.GitHash=$(GITCOMMIT)" -o out/sgx-attestation-hub
 
 test:
 	go test ./... -coverprofile cover.out

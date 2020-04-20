@@ -4,7 +4,10 @@
  */
 package constants
 
-import "crypto"
+import (
+	"crypto"
+	"time"
+)
 
 const (
 	HomeDir                          = "/opt/sgx-attestation-hub/"
@@ -17,17 +20,20 @@ const (
 	SecurityLogFile                  = LogDir + "sgx-attestation-hub-security.log"
 	HTTPLogFile                      = LogDir + "http.log"
 	ConfigFile                       = "config.yml"
+	DefaultTLSCertFile               = ConfigDir + "tls-cert.pem"
+	DefaultTLSKeyFile                = ConfigDir + "tls.key"
 	HubTimeStamp                     = "HubSchedulerRun.txt"
-	TLSCertFile                      = "cert.pem"
-	TLSKeyFile                       = "key.pem"
 	TrustedJWTSigningCertsDir        = ConfigDir + "certs/trustedjwt/"
 	TrustedCAsStoreDir               = ConfigDir + "certs/trustedca/"
-	RootCADirPath                    = ConfigDir + "certs/cms-root-ca/"
-	PIDFile                          = "sgx-attestation-hub.pid"
 	ServiceRemoveCmd                 = "systemctl disable sgx-attestation-hub"
 	HashingAlgorithm                 = crypto.SHA384
-	PasswordRandomLength             = 20
-	JWTCertsCacheTime                = "1m"
+	CmsTlsCertDigestEnv              = "CMS_TLS_CERT_SHA384"
+	DefaultReadTimeout             = 30 * time.Second
+	DefaultReadHeaderTimeout       = 10 * time.Second
+	DefaultWriteTimeout            = 10 * time.Second
+	DefaultIdleTimeout             = 10 * time.Second
+	DefaultMaxHeaderBytes          = 1 << 20
+	DefaultLogEntryMaxLength      = 300
 	DefaultAuthDefendMaxAttempts     = 5
 	DefaultAuthDefendIntervalMins    = 5
 	DefaultAuthDefendLockoutMins     = 15
@@ -35,15 +41,12 @@ const (
 	DefaultDBRotationMaxTableCnt     = 10
 	DefaultSSLCertFilePath           = ConfigDir + "sgx-attestation-hub-dbcert.pem"
 	ServiceName                      = "sgx-attestation-hub"
+	SAHUserName                      = "sah"
 	DefaultHttpPort                  = 9443
 	DefaultKeyAlgorithm              = "rsa"
 	DefaultKeyAlgorithmLength        = 3072
 	DefaultSAHTlsSan                 = "127.0.0.1,localhost"
 	DefaultSAHTlsCn                  = "SGX AH TLS Certificate"
-	DefaultSAHCertOrganization       = "INTEL"
-	DefaultSAHCertCountry            = "US"
-	DefaultSAHCertProvince           = "SF"
-	DefaultSAHCertLocality           = "SC"
 	OpenStackPlugin                  = "Nova"
 	KubernetesPlugin                 = "kubernetes"
 	NovaPluginUserName               = "user.name"
