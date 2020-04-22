@@ -14,6 +14,7 @@ import (
 	"intel/isecl/sgx-attestation-hub/constants"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,14 +45,16 @@ type Configuration struct {
 		IntervalMins        int
 		LockoutDurationMins int
 	}
-
+	SAH struct {
+		User     string
+		Password string
+	}
 	Token struct {
 		IncludeKid        bool
 		TokenDurationMins int
 	}
 	CMSBaseUrl string
 	AuthServiceUrl string
-	BearerToken    string
 	ShvsBaseUrl    string
 	SchedulerTimer int
 	Subject struct {
@@ -123,11 +126,20 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		return errorLog.Wrap(errors.New("CMS_TLS_CERT_SHA384 is not defined in environment"), "SaveConfiguration() ENV variable not found")
 	}
 
-	bearerToken, err := c.GetenvString("BEARER_TOKEN", "BEARER_TOKEN")
-	if err == nil && bearerToken != "" {
-		conf.BearerToken = bearerToken
-	} else if conf.BearerToken == "" {
-		log.Error("BEARER_TOKEN is not defined in environment")
+	sahAASUser, err := c.GetenvString(constants.SAH_USER, "SAH Service Username")
+	if err == nil && sahAASUser != "" {
+		conf.SAH.User = sahAASUser
+	} else if conf.SAH.User == "" {
+		commLog.GetDefaultLogger().Error("SAH_ADMIN_USERNAME is not defined in environment or configuration file")
+		return errorLog.Wrap(err, "SAH_ADMIN_USERNAME is not defined in environment or configuration file")
+	}
+
+	sahAASPassword, err := c.GetenvSecret(constants.SAH_PASSWORD, "SAH Service Password")
+	if err == nil && sahAASPassword != "" {
+		conf.SAH.Password = sahAASPassword
+	} else if strings.TrimSpace(conf.SAH.Password) == "" {
+		commLog.GetDefaultLogger().Error("SAH_ADMIN_PASSWORD is not defined in environment or configuration file")
+		return errorLog.Wrap(err, "SAH_ADMIN_PASSWORD is not defined in environment or configuration file")
 	}
 
 	shvsBaseUrl, err := c.GetenvString("SHVS_BASE_URL", "SHVS Base URL")

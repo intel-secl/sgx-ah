@@ -8,13 +8,72 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"intel/isecl/lib/clients/v2"
+	"intel/isecl/lib/clients/v2/aas"
+	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"io"
 	"net/http"
 	"os"
+	"sync"
+)
+var (
+	c = config.Global()
+	aasClient = aas.NewJWTClient(c.AuthServiceUrl)
+	aasRWLock = sync.RWMutex{}
 )
 
-func GetApi(requestType string, url string, bearerToken string) (*http.Response, error) {
+func init() {
+	aasRWLock.Lock()
+	defer aasRWLock.Unlock()
+	if aasClient.HTTPClient == nil {
+		c, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
+		if err != nil {
+			return
+		}
+		aasClient.HTTPClient = c
+	}
+}
+
+func addJWTToken(req *http.Request) error {
+	log.Trace("resource/utils:addJWTToken() Entering")
+	defer log.Trace("resource/utils:addJWTToken() Leaving")
+
+	if aasClient.BaseURL == "" {
+		aasClient = aas.NewJWTClient(c.AuthServiceUrl)
+		if aasClient.HTTPClient == nil {
+			c, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
+			if err != nil {
+				return errors.Wrap(err, "resource/utils:addJWTToken() Error initializing http client")
+			}
+			aasClient.HTTPClient = c
+		}
+	}
+	aasRWLock.RLock()
+	jwtToken, err := aasClient.GetUserToken(c.SAH.User)
+	aasRWLock.RUnlock()
+	// something wrong
+	if err != nil {
+		// lock aas with w lock
+		aasRWLock.Lock()
+		defer aasRWLock.Unlock()
+		// check if other thread fix it already
+		jwtToken, err = aasClient.GetUserToken(c.SAH.User)
+		// it is not fixed
+		if err != nil {
+			aasClient.AddUser(c.SAH.User, c.SAH.Password)
+			err = aasClient.FetchAllTokens()
+			jwtToken, err = aasClient.GetUserToken(c.SAH.User)
+			if err != nil {
+				return errors.Wrap(err, "resource/utils:addJWTToken() Could not fetch token")
+			}
+		}
+	}
+	log.Debug("resource/utils:addJWTToken() successfully added jwt bearer token")
+	req.Header.Set("Authorization", "Bearer "+string(jwtToken))
+	return nil
+}
+
+func GetApi(requestType string, url string) (*http.Response, error) {
 
 	client, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
 	if err != nil {
@@ -26,7 +85,12 @@ func GetApi(requestType string, url string, bearerToken string) (*http.Response,
 		return nil, errors.Wrap(err, "GetApi: Failed to Get New request")
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+bearerToken)
+
+	err = addJWTToken(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "resource/utils: GetApi() Failed to add JWT token")
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetApi: Error while caching Host Status Information: "+err.Error())

@@ -40,13 +40,12 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Failed to Load configuratoin"))
 	}
 
-	bearerToken := conf.BearerToken
 	getSHVSUrl := conf.ShvsBaseUrl + "hosts"
 	SHVSUrl, parseErr := url.Parse(getSHVSUrl)
 	if parseErr != nil {
 		return errors.Wrap(parseErr, "FetchAllHostsFromHVS() : Configured SHVS URL is malformed")
 	}
-	var resp, err = GetApi("GET", SHVSUrl.String(), bearerToken)
+	var resp, err = GetApi("GET", SHVSUrl.String())
 
 	if resp == nil {
 		return errors.Wrap(err,"FetchAllHostsFromHVS: nil response received")
@@ -70,7 +69,7 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 
 	for i := 0; i < numberOfHosts; i++ {
 		url := conf.ShvsBaseUrl + "platform-data?HostName=" + hvsResponse[i].HostName
-		response, err := GetApi("GET", url, bearerToken)
+		response, err := GetApi("GET", url)
 		if response == nil {
 			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: nil response"))
 		} else if err != nil {
@@ -121,8 +120,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 	}
 
 	getSahUrl := conf.ShvsBaseUrl + "platform-data?numberOfMinutes=" + strconv.Itoa(hostRefreshTimeInMinutes)
-	bearerToken := conf.BearerToken
-	var resp, err = GetApi("GET", getSahUrl, bearerToken)
+	var resp, err = GetApi("GET", getSahUrl)
 
 	if resp == nil || err != nil {
 		return errors.New(fmt.Sprintf("FetchHostRegisteredInLastFewMinutes: Error: ", err, " response: ", resp))
@@ -142,7 +140,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 	// below code to fetch platform data for each host
 	for i := 0; i < 1; i++ { // numberOfHostsUpdated; i++ {
 		getSahUrl = conf.ShvsBaseUrl + "hosts/" + hostPlatformData[0].Id
-		response, err := GetApi("GET", getSahUrl, bearerToken)
+		response, err := GetApi("GET", getSahUrl)
 		if err != nil {
 			log.Error("FetchHostRegisteredInLastFewMinutes: ", err)
 		}

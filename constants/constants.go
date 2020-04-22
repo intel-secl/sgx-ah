@@ -28,6 +28,8 @@ const (
 	ServiceRemoveCmd                 = "systemctl disable sgx-attestation-hub"
 	HashingAlgorithm                 = crypto.SHA384
 	CmsTlsCertDigestEnv              = "CMS_TLS_CERT_SHA384"
+	SAH_USER                         = "SAH_ADMIN_USERNAME"
+	SAH_PASSWORD                     = "SAH_ADMIN_PASSWORD"
 	DefaultReadTimeout               = 30 * time.Second
 	DefaultReadHeaderTimeout         = 10 * time.Second
 	DefaultWriteTimeout              = 10 * time.Second
