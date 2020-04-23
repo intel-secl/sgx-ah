@@ -28,12 +28,12 @@ const (
 	ServiceRemoveCmd                 = "systemctl disable sgx-attestation-hub"
 	HashingAlgorithm                 = crypto.SHA384
 	CmsTlsCertDigestEnv              = "CMS_TLS_CERT_SHA384"
-	DefaultReadTimeout             = 30 * time.Second
-	DefaultReadHeaderTimeout       = 10 * time.Second
-	DefaultWriteTimeout            = 10 * time.Second
-	DefaultIdleTimeout             = 10 * time.Second
-	DefaultMaxHeaderBytes          = 1 << 20
-	DefaultLogEntryMaxLength      = 300
+	DefaultReadTimeout               = 30 * time.Second
+	DefaultReadHeaderTimeout         = 10 * time.Second
+	DefaultWriteTimeout              = 10 * time.Second
+	DefaultIdleTimeout               = 10 * time.Second
+	DefaultMaxHeaderBytes            = 1 << 20
+	DefaultLogEntryMaxLength         = 300
 	DefaultAuthDefendMaxAttempts     = 5
 	DefaultAuthDefendIntervalMins    = 5
 	DefaultAuthDefendLockoutMins     = 15
@@ -63,6 +63,16 @@ const (
 	URL_HOSTATTRIBUTES               = "hostattributes"
 	PATH                             = "/apis/crd.isecl.intel.com/v1beta1/namespaces/default"
 	SLASH                            = "/"
+	/*Open Stack Specific Constants */
+	RESOURCE_PATH_V3_AUTH_TOKEN                 = "/v3/auth/tokens"
+	KEYSTONE_AUTH_TOKEN_HEADER_KEY              = "X-Subject-Token"
+	RESOURCE_PATH_TRAITS                        = "/traits"
+	PLACEMENT                                   = "placement"
+	OPENSTACK_API_MICROVERSION_HEADER           = "OpenStack-API-Version"
+	PLACEMENT_API_MICROVERSION_VALUE            = "placement 1.21"
+	RESOURCE_PATH_RESOURCE_PROVIDERS_NAME_QUERY = "/resource_providers?name="
+	RESOURCE_PATH_RESOURCE_PROVIDERS            = "/resource_providers/"
+	MAX_RETRIES_DUE_TO_CONFLICTS                = 3
 )
 
 // State represents whether or not a daemon is running or not

@@ -225,6 +225,13 @@ func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Pl
 				return err
 			}
 		} else if value == "OpenStack" {
+			var o1 plugins.OpenStack
+			err := o1.Pushdata(pData, plugin)
+			if err != nil {
+				log.Error("got error while pushing the data to openstack: ", err)
+				return err
+			}
+
 		} else {
 			///error
 			log.Error("plugin provider doesn't match")
