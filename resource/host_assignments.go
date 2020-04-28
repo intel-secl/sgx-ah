@@ -115,6 +115,14 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
+		if input.TenantId == "" {
+			return &resourceError{Message: "tenant uuid information is mandatory", StatusCode: http.StatusBadRequest}
+		}
+
+		if input.HardwareUUID == nil || len(input.HardwareUUID) == 0{
+			return &resourceError{Message: "hardware uuid information is mandatory", StatusCode: http.StatusBadRequest}
+		}
+
 		validationErr := validation.ValidateUUIDv4(input.TenantId)
 		if validationErr != nil {
 			log.Error("resource/host_assignments: createHostTenantMapping() Error validating tenant Id" + validationErr.Error())
