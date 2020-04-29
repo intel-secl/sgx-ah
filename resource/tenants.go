@@ -9,9 +9,9 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	consts "intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
-	consts "intel/isecl/sgx-attestation-hub/constants"
 	"net/http"
 	"strings"
 	"time"
@@ -37,17 +37,6 @@ func SGXTenantRegister(r *mux.Router, db repository.SAHDatabase) {
 	defer log.Trace("resource/tenants: SGXTenantRegister() Leaving")
 
 	r.Handle("/tenants", handlers.ContentTypeHandler(registerTenant(db), "application/json")).Methods("POST")
-}
-
-func ValidateInput(tenant Tenant) error {
-	log.Trace("resource/tenants: ValidateInput() Entering")
-	defer log.Trace("resource/tenants: ValidateInput() Leaving")
-
-	validationErr := ValidateNameString(tenant.TenantName)
-	if validationErr != nil {
-		return errors.Wrap(validationErr, "input validation failed for tenant name")
-	}
-	return nil
 }
 
 func extractCredentialFromTenant(tenant Tenant) map[string][]PluginProperty {
@@ -160,10 +149,10 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
-		err = ValidateInput(tenant)
-		if err != nil {
-			log.Error("resource/tenant:registerTenant() input validation failed" + err.Error())
-			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
+		validateResult := ValidateInput(tenant)
+		if validateResult != "" {
+			log.Error("resource/tenant:registerTenant() input validation failed")
+			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
 		}
 
 		pluginCredentialsMap := extractCredentialFromTenant(tenant)
