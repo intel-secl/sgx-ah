@@ -13,6 +13,7 @@ import (
 
 var (
 	nameReg    = regexp.MustCompile(`^[A-Za-z0-9-_.]{1,31}$`)
+	keyReg     = regexp.MustCompile(`^[A-Za-z0-9-_.]+$`)
 	xssReg     = regexp.MustCompile(`(?i)^.*(<|>|Redirect|script|alert).*$`)
 )
 
@@ -20,6 +21,13 @@ var (
 func ValidateNameString(nameString string) error {
 	if !nameReg.MatchString(nameString) {
 		return errors.New("invalid name string provided")
+	}
+	return nil
+}
+
+func ValidateKeyString(keyString string) error {
+	if !keyReg.MatchString(keyString) {
+		return errors.New("invalid key string provided")
 	}
 	return nil
 }
@@ -72,7 +80,7 @@ func ValidateInput(tenant Tenant) string {
 					errors = append(errors, "Plugin property value cannot be empty")
 					errorMessageValueAdded=true
 				}
-				validationErr = ValidateNameString(property.Key)
+				validationErr = ValidateKeyString(property.Key)
 				if !errorMessageKeyAdded && validationErr != nil {
 					errors = append(errors, "Plugin property key can only contain alphanumeric and special characters (. _ -). Only 31 characters are allowed")
 					errorMessageKeyAdded=true
