@@ -186,6 +186,21 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		conf.TLSCertFile = constants.DefaultTLSCertFile
 	}
 
+	logLevel, err := c.GetenvString("SAH_LOGLEVEL", "SAH Log Level")
+	if err != nil {
+		commLog.GetDefaultLogger().Infof("config/config:SaveConfiguration() %s not defined, using default log level: Info", constants.SAHLogLevel)
+		conf.LogLevel = log.InfoLevel
+	} else {
+		llp, err := log.ParseLevel(logLevel)
+		if err != nil {
+			commLog.GetDefaultLogger().Info("config/config:SaveConfiguration() Invalid log level specified in env, using default log level: Info")
+			conf.LogLevel = log.InfoLevel
+		} else {
+			conf.LogLevel = llp
+			commLog.GetDefaultLogger().Infof("config/config:SaveConfiguration() Log level set %s\n", logLevel)
+		}
+	}
+
 	sanList, err := c.GetenvString("SAN_LIST", "SAN list for TLS")
 	if err == nil && sanList != "" {
 		conf.CertSANList = sanList
