@@ -1,7 +1,7 @@
 /*
 * Copyright (C) 2020 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
-*/
+ */
 package resource
 
 import (
@@ -18,18 +18,18 @@ import (
 )
 
 type PluginProperty struct {
-	Key             string `json:"key"`
-	Value           string `json:"value"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type Plugin struct {
-	PluginName       string `json:"name"`
-	Properties       []PluginProperty `json:"properties"`
+	PluginName string           `json:"name"`
+	Properties []PluginProperty `json:"properties"`
 }
 
 type Tenant struct {
-	TenantName       string   `json:"name"`
-	Plugins          []*Plugin `json:"plugins"`
+	TenantName string    `json:"name"`
+	Plugins    []*Plugin `json:"plugins"`
 }
 
 func SGXTenantRegister(r *mux.Router, db repository.SAHDatabase) {
@@ -44,11 +44,11 @@ func extractCredentialFromTenant(tenant Tenant) map[string][]PluginProperty {
 	defer log.Trace("resource/tenants: extractCredentialFromTenant() Leaving")
 
 	pluginCredentialsMap := make(map[string][]PluginProperty)
-    plugins := tenant.Plugins
+	plugins := tenant.Plugins
 
 	log.Debug("Extracting credentials from tenant")
-    for _, plugin := range plugins {
-    	if strings.EqualFold(plugin.PluginName, consts.OpenStackPlugin) {
+	for _, plugin := range plugins {
+		if strings.EqualFold(plugin.PluginName, consts.OpenStackPlugin) {
 			credentials := make([]PluginProperty, 0)
 			for _, property := range plugin.Properties {
 				if (property.Key == consts.NovaPluginUserName) || (property.Key == consts.NovaPluginUserPassword) {
@@ -70,7 +70,7 @@ func extractCredentialFromTenant(tenant Tenant) map[string][]PluginProperty {
 	return pluginCredentialsMap
 }
 
-func removeProperty(properties []PluginProperty, index int) []PluginProperty{
+func removeProperty(properties []PluginProperty, index int) []PluginProperty {
 	log.Trace("resource/tenants: removeProperty() Entering")
 	defer log.Trace("resource/tenants: removeProperty() Leaving")
 
@@ -86,7 +86,7 @@ func removeCredentialFromTenant(tenant Tenant) {
 	log.Debug("Removing credentials from tenant")
 	for _, plugin := range plugins {
 		if strings.EqualFold(plugin.PluginName, consts.OpenStackPlugin) {
-			for index := 0 ; index < len(plugin.Properties) ; index++ {
+			for index := 0; index < len(plugin.Properties); index++ {
 				if (plugin.Properties[index].Key == consts.NovaPluginUserName) || (plugin.Properties[index].Key == consts.NovaPluginUserPassword) {
 					plugin.Properties = removeProperty(plugin.Properties, index)
 					index--
@@ -94,7 +94,7 @@ func removeCredentialFromTenant(tenant Tenant) {
 			}
 		}
 		if strings.EqualFold(plugin.PluginName, consts.KubernetesPlugin) {
-			for index := 0 ; index < len(plugin.Properties) ; index++ {
+			for index := 0; index < len(plugin.Properties); index++ {
 				if (plugin.Properties[index].Key == consts.KubernetesClientKeystorePassword) || (plugin.Properties[index].Key == consts.KubernetesServerKeystorePassword) {
 					plugin.Properties = removeProperty(plugin.Properties, index)
 					index--
@@ -108,10 +108,10 @@ func createTenantPluginCredential(db repository.SAHDatabase, tenantInput *types.
 	log.Trace("resource/tenant:createTenantPluginCredential() Entering")
 	defer log.Trace("resource/tenant:createTenantPluginCredential() Leaving")
 
-	for pluginName, pluginValue  := range pluginCredentialsMap {
+	for pluginName, pluginValue := range pluginCredentialsMap {
 		pluginValueJSON, err := json.Marshal(pluginValue)
 		if err != nil {
-			return errors.Wrap(err,"resource/tenant:createTenantPluginCredential() failed to marshal tenant data to JSON")
+			return errors.Wrap(err, "resource/tenant:createTenantPluginCredential() failed to marshal tenant data to JSON")
 		}
 		pluginValueStr := string(pluginValueJSON)
 		AhTenantPluginCredential := types.TenantPluginCredential{
@@ -123,7 +123,7 @@ func createTenantPluginCredential(db repository.SAHDatabase, tenantInput *types.
 		}
 		_, err = db.TenantPluginCredentialRepository().Create(AhTenantPluginCredential)
 		if err != nil {
-			return errors.Wrap(err,"resource/tenant:createTenantPluginCredential() Error while caching Plugin Credentials")
+			return errors.Wrap(err, "resource/tenant:createTenantPluginCredential() Error while caching Plugin Credentials")
 		}
 	}
 	return nil
@@ -145,7 +145,7 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 		dec.DisallowUnknownFields()
 		err := dec.Decode(&tenant)
 		if err != nil {
-			log.Error("resource/tenant:registerTenant() Error decoding request input" + err.Error())
+			log.WithError(err).Info("registerTenant() Error decoding request input")
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
@@ -160,7 +160,7 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 
 		tenantJSON, err := json.Marshal(tenant)
 		if err != nil {
-			log.Error("resource/tenant:registerTenant() failed to marshal tenant data to JSON")
+			log.WithError(err).Info("registerTenant() failed to marshal tenant data to JSON")
 			return errors.New("resource/tenant:registerTenant() failed to marshal tenant data to JSON")
 		}
 		tenantStr := string(tenantJSON)

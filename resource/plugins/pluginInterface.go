@@ -6,7 +6,6 @@
 package plugins
 
 import (
-	//"intel/isecl/sgx-attestation-hub/resource"
 	"intel/isecl/sgx-attestation-hub/types"
 )
 

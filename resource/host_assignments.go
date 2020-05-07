@@ -63,7 +63,7 @@ func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([
 	var mappingResponse HostTenantMappingResponse
 	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId})
 	if err != nil {
-		log.Error("resource/host_assignments: createMapping() Tenant does not exist with id :", input.TenantId)
+		log.WithError(err).WithField("id", input.TenantId).Info("createMapping() Tenant does not exist with id provided")
 		return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
 	}
 
@@ -72,7 +72,7 @@ func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([
 	for _, huuId := range uniqueHuuIdList {
 		_, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: huuId})
 		if err != nil {
-			log.Error("resource/host_assignments: createMapping() Host does not exist with id :", huuId)
+			log.WithError(err).WithField("hardwareUUID", huuId).Info("createMapping() Host does not exist with hardware id provided")
 			return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
 		}
 		hostTenantMapping := types.HostTenantMapping{
@@ -111,7 +111,7 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 		dec.DisallowUnknownFields()
 		err := dec.Decode(&input)
 		if err != nil {
-			log.Error("resource/host_assignments: createHostTenantMapping() Error decoding request input" + err.Error())
+			log.WithError(err).Info("createHostTenantMapping() Error decoding request input")
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
@@ -119,20 +119,20 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 			return &resourceError{Message: "tenant uuid information is mandatory", StatusCode: http.StatusBadRequest}
 		}
 
-		if input.HardwareUUID == nil || len(input.HardwareUUID) == 0{
+		if input.HardwareUUID == nil || len(input.HardwareUUID) == 0 {
 			return &resourceError{Message: "hardware uuid information is mandatory", StatusCode: http.StatusBadRequest}
 		}
 
 		validationErr := validation.ValidateUUIDv4(input.TenantId)
 		if validationErr != nil {
-			log.Error("resource/host_assignments: createHostTenantMapping() Error validating tenant Id" + validationErr.Error())
+			log.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating tenant Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		for _, huuid := range input.HardwareUUID {
 			validationErr = validation.ValidateHardwareUUID(huuid)
 			if validationErr != nil {
-				log.Error("resource/host_assignments: createHostTenantMapping() Error validating host hardware UUID" + validationErr.Error())
+				log.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating host hardware UUID")
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}

@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/pkcs12"
 	clog "intel/isecl/lib/common/v2/log"
+	commLogMsg "intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/types"
 	"io/ioutil"
@@ -22,6 +23,7 @@ import (
 )
 
 var log = clog.GetDefaultLogger()
+var slog = clog.GetSecurityLogger()
 
 type Kubernetes struct{}
 
@@ -47,8 +49,7 @@ type HostAttributesCRD struct {
 	Metadata   HostAttributesMetadata `json:"metadata"`
 	ApiVersion string                 `json:"apiVersion"`
 	Kind       string                 `json:"kind"`
-	//Spec       []HostAttributesSpec   `json:"spec"`
-	Spec HostList `json:"spec"`
+	Spec       HostList               `json:"spec"`
 }
 
 type HostAttributesSpec struct {
@@ -64,7 +65,7 @@ type HostAttributesSpec struct {
 }
 
 func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) error {
-	log.Trace("Pushdata entering")
+	log.Trace("resource/plugin kubernetesPlugin:Pushdata() entering")
 	defer log.Trace("resource/plugin kubernetesPlugin:Pushdata() Leaving")
 
 	////TODO: validate
@@ -105,7 +106,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 	var k8s_url, clientPass, serverKeystore, clientKeystore string
 	//var serverPass string ///TODO: Currently not being used as truststore is not being parsed
 	for _, ss := range arr1 {
-		log.Trace("hostAttributes: ", ss)
+		log.Debug("hostAttributes: ", ss)
 		///Each CRD push data
 		tenantId := tenantIdStr ///get from crdData.MetaData
 		///Build End point urls and publish to K8s
@@ -129,7 +130,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 	}
 	CaCert, err := ioutil.ReadFile(serverKeystore)
 	if err != nil {
-		log.Error("error came in reading CaCert: ", err)
+		log.WithError(err).Info("error came in reading CaCert")
 		return errors.Wrap(err, "Can't read CaCert")
 	}
 
@@ -138,24 +139,24 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 
 	encryptedCert, err := ioutil.ReadFile(clientKeystore)
 	if err != nil {
-		log.Error("error came in reading client cetificate: ", err)
+		log.WithError(err).Info("error came in reading client cetificate")
 		return errors.Wrap(err, "Can't read clientCerificate")
 	}
 	key, cert, err := pkcs12.Decode(encryptedCert, clientPass)
 	if err != nil {
-		log.Error("error came in decoding client cetificate: ", err)
+		slog.WithError(err).Error(commLogMsg.InvalidInputBadEncoding)
 		return errors.Wrap(err, "Can't decode clientCerificate")
 	}
 	value, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		log.Error("error came in x509.MarshalPKCS8PrivateKey: ", err)
+		log.WithError(err).Info("error came in x509.MarshalPKCS8PrivateKey")
 		return errors.Wrap(err, "Can't marshal key")
 	}
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: value})
 	clientCert, err := tls.X509KeyPair(pemCert, pemKey)
 	if err != nil {
-		log.Error("error came in tls.X509KeyPair: ", err)
+		log.WithError(err).Info("error came in tls.X509KeyPair")
 		return errors.Wrap(err, "can't create keyPair")
 	}
 
@@ -180,9 +181,6 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		return errors.Wrap(err, "client.Do failed")
 	}
 
-	//r, err := client.Get(url)
-	//req, err := http.NewRequest("GET", url, nil)
-	//r, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "GET Call failed")
 	}
@@ -201,7 +199,6 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		}
 		///Get MetaData from this
 		crdData.Metadata.ResourceVersion = hCRD.Metadata.ResourceVersion
-		log.Trace("crdData: ", crdData)
 
 		reqBytes, err := json.Marshal(crdData)
 		if err != nil {
@@ -218,7 +215,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		if err != nil {
 			return errors.Wrap(err, "PushSGXData: Error while caching Host Status Information: "+err.Error())
 		}
-		log.Info("PUT response status: ", resp.StatusCode)
+		log.Debug("PUT response status: ", resp.StatusCode)
 		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			return errors.Wrap(err, "PUT call ioutil.ReadAll failed")
@@ -239,7 +236,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		if err != nil {
 			return errors.Wrap(err, "PushSGXData: Error while caching Host Status Information: "+err.Error())
 		}
-		log.Info("POST response status: ", resp.StatusCode)
+		log.Debug("POST response status: ", resp.StatusCode)
 		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil || resp.StatusCode != http.StatusCreated {
 			return errors.Wrap(err, "POST call ioutil.ReadAll failed")

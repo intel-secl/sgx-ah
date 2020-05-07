@@ -84,19 +84,14 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 		///TODO: Turn this into swtich case
 		if property.Key == "auth.endpoint" {
 			pluginAuthEndpoint = property.Value
-			//log.Info("pluginAuthEndpoint: ", pluginAuthEndpoint)
 		} else if property.Key == "domain.name" {
 			domainName = property.Value
-			//log.Info("domainName: ", domainName)
 		} else if property.Key == "user.password" {
 			password = property.Value
-			//log.Info("password: ", password)
 		} else if property.Key == "user.name" {
 			userName = property.Value
-			//log.Info("username: ", userName)
 		} else if property.Key == "tenant.name" {
 			tenantName = property.Value
-			//log.Info("tenantName ", tenantName)
 		}
 	}
 	if pluginAuthEndpoint == "" || domainName == "" || userName == "" || password == "" || tenantName == "" {
@@ -106,10 +101,10 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	///Now use above information to cretae  a token and send to OpenStack
 	err := validateUrl(pluginAuthEndpoint, "AUTH")
 	if err != nil {
+		log.WithError(err).Info("URL parsing failed")
 		return errors.Wrap(err, "URL parsing failed")
 	}
 	tokenUrl := pluginAuthEndpoint + constants.RESOURCE_PATH_V3_AUTH_TOKEN
-	log.Info("tokenUrl: ", tokenUrl)
 
 	var token utils.AuthToken
 	token.Auth.Identity.Methods = []string{"password"}
@@ -124,7 +119,7 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	var customTraitsSuperSet []string
 	for _, p1 := range pData.Host_details {
 		customTraits, err := generateTraitsFromTrustReport(p1)
-		log.Info("customTraits: ", customTraits)
+		log.Debug("customTraits: ", customTraits)
 		if err != nil {
 			return errors.Wrap(err, "error came in generateTraitsFromTrustReportgenerateTraitsFromTrustReport")
 		}
@@ -133,13 +128,14 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	}
 	openstackTraits, err := getOpenstackTraits(tokenResponse)
 	if err != nil {
+		log.WithError(err).Info("error came in getOpenstackTraits")
 		return errors.Wrap(err, "error came in getOpenstackTraits")
 	}
-	log.Info("customTraitsSuperSet: ", customTraitsSuperSet)
 	newTraits := utils.Difference(customTraitsSuperSet, openstackTraits)
-	log.Info("newTraits: ", newTraits)
+	log.Debug("newTraits: ", newTraits)
 	err = createOpenstackTraits(newTraits, tokenResponse)
 	if err != nil {
+		log.WithError(err).Info("error came in createOpenstackTraits")
 		return errors.Wrap(err, "error came in createOpenstackTraits")
 	}
 
@@ -147,18 +143,18 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	for key, value := range hostCustomTraitsMap {
 		hostName := key
 		latestCitTraits := value
-		log.Info("HostName:  %s :Traits: %s", hostName, latestCitTraits)
+		log.Debug("HostName:  %s :Traits: %s", hostName, latestCitTraits)
 		var hostRp resourceProviderArr
 		err := getResourceProvider(hostName, tokenResponse, &hostRp)
 		if err != nil {
+			log.WithError(err).Info("error came in getResourceProvider")
 			return errors.Wrap(err, "error came in getResourceProvider")
 		}
-		log.Info("hostRp: ", hostRp.Uuid)
+		log.Debug("hostRp: ", hostRp.Uuid)
 		if hostRp.Uuid != "" {
 			mapHostTraits(hostRp.Uuid, hostName, latestCitTraits, constants.MAX_RETRIES_DUE_TO_CONFLICTS, tokenResponse)
-			//log.info("Updating traits for host {} succeeded", hostName)
 		} else {
-			log.Info("no resource for hostname: ", hostName)
+			log.Trace("no resource for hostname: ", hostName)
 		}
 	}
 	return nil
@@ -169,23 +165,26 @@ func mapHostTraits(uuid string, hostName string, latestCitTraits []string, x int
 	for tries > 0 {
 		hostTraits, err := getResourceProviderTraits(uuid, v1)
 		if err != nil {
-			log.Error(err, "getResourceProviderTraits failed. Retrying")
+			log.WithError(err).Info("getResourceProviderTraits failed. Retrying")
 			tries--
 		}
 		if tries == 0 {
-			log.Info("Sending data to controller failed")
+			log.Debug("Sending data to controller failed")
 			return errors.New("error came in sending data")
 		}
-		log.Info("hostTraits: ", hostTraits.Traits)
+		log.Debug("hostTraits: ", hostTraits.Traits)
 		updatedTraits, err := getUpdatedTraits(hostTraits.Traits, latestCitTraits)
-		log.Info("updatedTraits: ", updatedTraits)
+		log.Debug("updatedTraits: ", updatedTraits)
 		if updatedTraits != nil || err != nil {
 			//create a struct
 			var resourceProviderTraits ResourceProviderTraits
 			resourceProviderTraits.Traits = updatedTraits
 			resourceProviderTraits.ResourceArr.Uuid = hostTraits.ResourceArr.Uuid
 			resourceProviderTraits.ResourceArr.Generation = hostTraits.ResourceArr.Generation
-			mapResourceProviderTraits(resourceProviderTraits, v1)
+			err = mapResourceProviderTraits(resourceProviderTraits, v1)
+			if err != nil {
+				log.WithError(err).Info("mapResourceProviderTraits failed")
+			}
 			log.Info("Updating traits for host {} succeeded with {} retries", hostName, x)
 		} else {
 			log.Info("Skipping nova call since the host is already associated with the ISECL traits", hostName)
@@ -198,7 +197,7 @@ func mapHostTraits(uuid string, hostName string, latestCitTraits []string, x int
 func mapResourceProviderTraits(resourceProviderTraits ResourceProviderTraits, v1 utils.TokenResponse) error {
 	resourceUrl := utils.GetEndPointUrl(v1, constants.PLACEMENT)
 	resourceUrl = resourceUrl + constants.RESOURCE_PATH_RESOURCE_PROVIDERS + resourceProviderTraits.ResourceArr.Uuid + constants.RESOURCE_PATH_TRAITS
-	log.Info("url to get resource traits: ", resourceUrl)
+	log.Debug("url to get resource traits: ", resourceUrl)
 	var rpTraitsMapping traitsInfo
 	rpTraitsMapping.Traits = resourceProviderTraits.Traits
 	rpTraitsMapping.Generation = resourceProviderTraits.ResourceArr.Generation
@@ -217,7 +216,7 @@ func mapResourceProviderTraits(resourceProviderTraits ResourceProviderTraits, v1
 	if err != nil {
 		return errors.Wrap(err, "response is not provided: ")
 	}
-	log.Info("PUT response status: ", resp.StatusCode)
+	log.Debug("PUT response status: ", resp.StatusCode)
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return errors.Wrap(err, "PUT call ioutil.ReadAll failed")
@@ -227,20 +226,16 @@ func mapResourceProviderTraits(resourceProviderTraits ResourceProviderTraits, v1
 }
 
 func getUpdatedTraits(resourceProviderTraits []string, citTraits []string) ([]string, error) {
-	log.Info("entering getUpdatedTraits")
+	log.Trace("entering getUpdatedTraits")
 	commonTraits := utils.Intersection(resourceProviderTraits, citTraits)
-	log.Info("commonTraits: ", commonTraits)
 	newTraitsToAdd := utils.Difference(citTraits, commonTraits)
-	log.Info("newTraitsToAdd: ", newTraitsToAdd)
 	x1 := utils.Difference(resourceProviderTraits, commonTraits)
-	log.Info("x1: ", x1)
 	var staleTraitsOnHost []string
 	for _, a1 := range x1 {
 		if strings.HasPrefix(a1, "CUSTOM_SKC") == true {
 			staleTraitsOnHost = append(staleTraitsOnHost, a1)
 		}
 	}
-	log.Info("staleTraitsOnHost: ", staleTraitsOnHost)
 	var updatedTraits []string
 	if newTraitsToAdd != nil || staleTraitsOnHost != nil {
 		updatedTraits = append(updatedTraits, resourceProviderTraits...)
@@ -254,7 +249,6 @@ func getUpdatedTraits(resourceProviderTraits []string, citTraits []string) ([]st
 		}
 		updatedTraits = append(updatedTraits, newTraitsToAdd...)
 	}
-	log.Info("updatedTraits: ", updatedTraits)
 	return updatedTraits, nil
 }
 
@@ -288,7 +282,6 @@ func getResourceProviderTraits(uuid string, v1 utils.TokenResponse) (ResourcePro
 		return ResourceProviderTraits{}, errors.Wrap(err, "error came in unmarshalling")
 	}
 	if len(r1.Traits) == 0 {
-		log.Info("nothing to be done")
 		return ResourceProviderTraits{}, errors.Wrap(err, "error came in Traits length")
 	}
 	resourceProviderTraitSet = r1.Traits
@@ -328,7 +321,6 @@ func getResourceProvider(hostName string, v1 utils.TokenResponse, r2 *resourcePr
 		return errors.Wrap(err, "error came in unmarshalling")
 	}
 	if len(r1.ResourceProvider) == 0 {
-		log.Info("nothing to be done")
 		return nil
 	}
 	if r1.ResourceProvider != nil {
@@ -343,7 +335,7 @@ func createOpenstackTraits(traitsSet []string, v1 utils.TokenResponse) error {
 
 	for _, trait := range traitsSet {
 		url := taritsUrl + "/" + trait
-		log.Info("Creating Trait using Url : " + url)
+		log.Debug("Creating Trait using Url : " + url)
 		req, err := putRequest(url, v1.TokenVal, nil)
 		if err != nil {
 			return errors.Wrap(err, "http NewRequest failed")
@@ -354,7 +346,7 @@ func createOpenstackTraits(traitsSet []string, v1 utils.TokenResponse) error {
 			return errors.Wrap(err, "http NewRequest failed")
 		}
 		resp, err := client.Do(req)
-		log.Info("status: ", resp.StatusCode)
+		log.Debug("status: ", resp.StatusCode)
 		if err != nil || resp.StatusCode != http.StatusNoContent {
 			return errors.Wrap(err, "client.Do failed")
 		}
@@ -451,7 +443,7 @@ func validateUrl(urlStr, typeurl string) error {
 
 func getRequest(urlstr, tokenVal string) (*http.Request, error) {
 	url, err := url.Parse(urlstr)
-	log.Info("Getting All Traits from Nova: ", url)
+	log.Debug("Getting All Traits from Nova: ", url)
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "http NewRequest failed")
@@ -464,7 +456,7 @@ func getRequest(urlstr, tokenVal string) (*http.Request, error) {
 
 func putRequest(urlstr, tokenVal string, reqBytes []byte) (*http.Request, error) {
 	url, err := url.Parse(urlstr)
-	log.Info("Adding All Traits into Nova: ", url)
+	log.Debug("Adding All Traits into Nova: ", url)
 	req, err := http.NewRequest("PUT", url.String(), bytes.NewBuffer(reqBytes))
 	if err != nil {
 		return nil, errors.Wrap(err, "http NewRequest failed")

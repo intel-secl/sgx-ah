@@ -23,6 +23,7 @@ import (
 	"encoding/pem"
 	"strings"
 
+	commLogMsg "intel/isecl/lib/common/v2/log/message"
 	"io/ioutil"
 )
 
@@ -72,7 +73,7 @@ func GetAHPublicKey() []byte {
 	rsaPublicKeyLocation := constants.PublickeyLocation
 	pubKey, err := ioutil.ReadFile(rsaPublicKeyLocation)
 	if err != nil {
-		log.Error("Error in reading the hub pem file:", err)
+		log.WithError(err).Info("Error in reading the hub pem file")
 	}
 	return pubKey
 }
@@ -86,14 +87,14 @@ func createSignedTrustReport(createSignedTrustReport string) (string, error) {
 
 	priv, err := ioutil.ReadFile(rsaPrivateKeyLocation)
 	if err != nil {
-		log.Error("no rsa private key found: ", err)
-		return "", errors.New("no rsa key file path provided")
+		log.WithError(err).Info("no rsa private key found")
+		return "", errors.Wrap(err, "no rsa key file path provided")
 	}
 
 	parsedKey, err := x509.ParsePKCS8PrivateKey(priv)
 	if err != nil {
-		log.Error("Cannot parse RSA private key from file: ", err)
-		return "", errors.New("Cannot parse RSA private key from file")
+		log.WithError(err).Info("Cannot parse RSA private key from file")
+		return "", errors.Wrap(err, "Cannot parse RSA private key from file")
 	}
 	privateKey, ok := parsedKey.(*rsa.PrivateKey)
 	if !ok {
@@ -103,12 +104,12 @@ func createSignedTrustReport(createSignedTrustReport string) (string, error) {
 
 	publicKey, err := ioutil.ReadFile(rsaPublicKeyLocation)
 	if err != nil {
-		log.Error("no rsa public key found: ", err)
-		return "", errors.New("no rsa key file path provided")
+		log.WithError(err).Info("no rsa key file path provided")
+		return "", errors.Wrap(err, "no rsa key file path provided")
 	}
 	pubPem, _ := pem.Decode(publicKey)
 	if pubPem == nil {
-		log.Error("rsa public key not decoded")
+		slog.Error(commLogMsg.InvalidInputBadEncoding)
 		return "", errors.New("rsa public key not decoded")
 	}
 
@@ -138,7 +139,7 @@ func SynchAttestationInfo(db repository.SAHDatabase) error {
 
 	ext_tennats, err := db.TenantRepository().RetrieveAllActiveTenants()
 	if ext_tennats == nil {
-		log.Info("No tenants configured")
+		log.Debug("No tenants configured")
 		return err
 	}
 	for _, tenant := range ext_tennats {
@@ -153,30 +154,30 @@ func SynchAttestationInfo(db repository.SAHDatabase) error {
 		err = configStruct.GetConfigStruct(configuartion)
 		if err != nil {
 			log.Error("synchAttestationInfo: Failed to get configurations for tenant: ", tenant.Id)
+			log.WithError(err).WithField("tenant id", tenant.Id).Info("synchAttestationInfo: Failed to get configurations for tenant")
 			continue
 		}
 		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id, Deleted: false})
 		if err != nil {
-			log.Error("synchAttestationInfo: Failed to get tenant mapping for: ", tenant.Id)
+			log.WithError(err).WithField("tenant id", tenant.Id).Info("synchAttestationInfo: Failed to get tenant mapping")
 			continue
 		} else if len(tenant_mapping) == 0 {
 			log.Error("synchAttestationInfo: no host assigned to the tenant: ", tenant.Id)
 			continue
 		}
-		log.Info("tenant_mapping retrieved: ", len(tenant_mapping))
+		log.Debug("tenant_mapping retrieved: ", len(tenant_mapping))
 
 		var hostDataSlice []types.HostDetails
 		for _, mapping := range tenant_mapping {
 			hardwareuuid := mapping.HostHardwareUUID
 			host, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: hardwareuuid, Deleted: false})
 			if host == nil {
-				//	return errors.New("No host with this uuid")
 				log.Error("synchAttestationInfo: No host with this uuid: ", hardwareuuid)
 				continue
 			}
 			hostDetailsPtr, err := populateHostDetails(host)
 			if err != nil {
-				log.Error("synchAttestationInfo: Failed to get configurations: ", err)
+				log.WithError(err).Info("synchAttestationInfo: Failed to get configurations")
 				continue
 			}
 
@@ -187,6 +188,7 @@ func SynchAttestationInfo(db repository.SAHDatabase) error {
 		err = processDataToPlugins(tenant, hostDataSlice, configStruct.Plugins, db)
 		if err != nil {
 			log.Error("synchAttestationInfo: Failed to push data: ", err)
+			log.WithError(err).Info("synchAttestationInfo: Failed to push data")
 		}
 	}
 	return nil
@@ -214,21 +216,21 @@ func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Pl
 		///Get Plugin class name
 		err := addCredentialToPlugin(t1, &plugin, db)
 		if err != nil {
-			log.Error("got error while adding Credentials: ", err)
+			log.WithError(err).Info("got error while adding Credentials")
 			return errors.Wrap(err, "Couldn't add credentials for plugin")
 		}
 		if value == "Kubernetes" {
 			var k1 plugins.Kubernetes
 			err := k1.Pushdata(pData, plugin)
 			if err != nil {
-				log.Error("got error while pushing the data: ", err)
+				log.WithError(err).Info("got error while pushing the data to Kubernetes")
 				return err
 			}
 		} else if value == "OpenStack" {
 			var o1 plugins.OpenStack
 			err := o1.Pushdata(pData, plugin)
 			if err != nil {
-				log.Error("got error while pushing the data to openstack: ", err)
+				log.WithError(err).Info("got error while pushing the data to openstack")
 				return err
 			}
 
@@ -248,7 +250,7 @@ func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SAHD
 	}
 	plugin_credential, err := db.TenantPluginCredentialRepository().Retrieve(credential)
 	if err != nil {
-		log.Error("didn't find any credential for plugin of tenant id: ", t1.Id)
+		log.WithError(err).WithField("tenant id", t1.Id).Info("didn't find any credential for plugin of tenant")
 		return errors.Wrap(err, "didn't find any credential for plugin")
 	}
 	///Get all the credenials from db which will come as a string.
@@ -257,15 +259,15 @@ func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SAHD
 	///configuartion is a string containing keys and values information
 	err = GetCredentials(plugin_credential.Credential, &credential_properties)
 	if err != nil {
-		log.Error("couldn't get any credentials: ", err)
+		log.WithError(err).Info("couldn't get any credentials")
 		return errors.Wrap(err, "couldn't get any credentials")
 	}
-	log.Trace("credential_properties: ", credential_properties)
+	log.Debug("credential_properties: ", credential_properties)
 	///Now add the property array to Plugin array
 	for _, prop := range credential_properties {
 		p1.Properties = append(p1.Properties, prop)
 	}
-	log.Trace("values of plugins after credentials: ", p1)
+	log.Debug("values of plugins after credentials: ", p1)
 	return nil
 }
 
@@ -285,7 +287,7 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 	hostPlatformData.Trusted = true
 	hostPlatformData.ValidTo = "2021-08-28T13:05:05.932Z"
 
-	log.Trace("hostPlatformData: ", hostPlatformData)
+	log.Debug("hostPlatformData: ", hostPlatformData)
 	trustReportBytes, err := (json.Marshal(hostPlatformData))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal hostPlatformData to get trustReport")

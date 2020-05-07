@@ -38,7 +38,7 @@ func StartSAHSchedular(db repository.SAHDatabase, timer int) {
 				log.Debug("scheduler/sah_scheduler: StartSAHSchedular() Timer started", t)
 				err := SAHSchedulerJob(db)
 				if err != nil {
-					log.Error("scheduler/sah_scheduler: StartSAHSchedular() :" + err.Error())
+					log.WithError(err).Info("scheduler/sah_scheduler: StartSAHSchedular()")
 					break
 				}
 			}

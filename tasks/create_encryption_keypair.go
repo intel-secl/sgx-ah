@@ -76,11 +76,6 @@ func (ek CreateEncryptionKey) Run(c csetup.Context) error {
 			fmt.Fprintf(os.Stderr, "Error while marshaling private key")
 			return errors.Wrap(err, "pkg/setup/create_encryption_keypair.go:Run() Error while generating a new RSA key pair")
 		}
-		/*// save private key
-		privateKey := &pem.Block{
-			Type:  "PRIVATE KEY",
-			Bytes: privBytes,
-		}*/
 
 		privateKeyFile, err := os.Create(constants.PrivatekeyLocation)
 		if err != nil {
@@ -88,7 +83,6 @@ func (ek CreateEncryptionKey) Run(c csetup.Context) error {
 			return errors.Wrap(err, "pkg/setup/create_encryption_keypair.go:Run() I/O error while saving private key file")
 		}
 		defer privateKeyFile.Close()
-		//err = pem.Encode(privateKeyFile, privateKey)
 		_, err = privateKeyFile.Write(privBytes)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "I/O error while encoding private key file")

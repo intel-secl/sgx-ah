@@ -16,8 +16,9 @@ import (
 	"os"
 	"sync"
 )
+
 var (
-	c = config.Global()
+	c         = config.Global()
 	aasClient = aas.NewJWTClient(c.AuthServiceUrl)
 	aasRWLock = sync.RWMutex{}
 )
@@ -77,7 +78,7 @@ func GetApi(requestType string, url string) (*http.Response, error) {
 
 	client, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
 	if err != nil {
-		return nil, errors.Wrap(err,"GetApi : Error in getting client object")
+		return nil, errors.Wrap(err, "GetApi : Error in getting client object")
 	}
 
 	req, err := http.NewRequest(requestType, url, nil)

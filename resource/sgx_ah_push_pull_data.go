@@ -48,18 +48,18 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 	var resp, err = GetApi("GET", SHVSUrl.String())
 
 	if resp == nil {
-		return errors.Wrap(err,"FetchAllHostsFromHVS: nil response received")
+		return errors.Wrap(err, "FetchAllHostsFromHVS: nil response received")
 	} else if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Invalid status code received:%d", resp.StatusCode))
 	} else if err != nil {
-		return errors.Wrap(err,"FetchAllHostsFromHVS: Error fetching hosts from HVS")
+		return errors.Wrap(err, "FetchAllHostsFromHVS: Error fetching hosts from HVS")
 	}
 
 	var hvsResponse HostBasicInfoArray
 	dec := json.NewDecoder(resp.Body)
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&hvsResponse)
-	log.Debug("FetchAllHostsFromHVS: Error: ", err)
+	log.WithError(err).Info("FetchAllHostsFromHVS decode return the error")
 	numberOfHosts := len(hvsResponse)
 	log.Debug("FetchAllHostsFromHVS: Total Number of Hosts: ", numberOfHosts)
 
@@ -142,7 +142,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 		getSahUrl = conf.ShvsBaseUrl + "hosts/" + hostPlatformData[0].Id
 		response, err := GetApi("GET", getSahUrl)
 		if err != nil {
-			log.Error("FetchHostRegisteredInLastFewMinutes: ", err)
+			log.WithError(err).Info("error while getting the platform data from SGX-HVS")
 		}
 		// here we are converting Http response in struct
 		var hvsResponseForHostId HostBasicInfo
@@ -181,7 +181,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 			_, err := sahDB.HostRepository().Create(host)
 
 			if err != nil {
-				log.Error("FetchHostRegisteredInLastFewMinutes: Failed to create Host:", err)
+				log.WithError(err).Info("FetchHostRegisteredInLastFewMinutes: Failed to create Host")
 			} else {
 				log.Info("FetchHostRegisteredInLastFewMinutes: Successfully created Host in DB")
 			}
