@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+var slog = commLog.GetSecurityLogger()
+
 // should move this into lib common, as its duplicated across SAH and SAH
 
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
@@ -188,16 +190,16 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 
 	logLevel, err := c.GetenvString("SAH_LOGLEVEL", "SAH Log Level")
 	if err != nil {
-		commLog.GetDefaultLogger().Infof("config/config:SaveConfiguration() %s not defined, using default log level: Info", constants.SAHLogLevel)
+		slog.Infof("config/config:SaveConfiguration() %s not defined, using default log level: Info", constants.SAHLogLevel)
 		conf.LogLevel = log.InfoLevel
 	} else {
 		llp, err := log.ParseLevel(logLevel)
 		if err != nil {
-			commLog.GetDefaultLogger().Info("config/config:SaveConfiguration() Invalid log level specified in env, using default log level: Info")
+			slog.Info("config/config:SaveConfiguration() Invalid log level specified in env, using default log level: Info")
 			conf.LogLevel = log.InfoLevel
 		} else {
 			conf.LogLevel = llp
-			commLog.GetDefaultLogger().Infof("config/config:SaveConfiguration() Log level set %s\n", logLevel)
+			slog.Infof("config/config:SaveConfiguration() Log level set %s\n", logLevel)
 		}
 	}
 
