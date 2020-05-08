@@ -33,7 +33,6 @@ type PlatformData struct {
 	Flc_enabled   bool   `json:"flc-enabled"`
 	TcbUpToDate   bool   `json:"tcbUpToDate"`
 	Epc_size      string `json:"epc-size"`
-	Trusted       bool   `json:"trusted"`
 	ValidTo       string `json:"valid_to"`
 }
 
@@ -53,7 +52,6 @@ type HostAttributesCRD struct {
 }
 
 type HostAttributesSpec struct {
-	Trusted             bool   `json:"trusted"`
 	ValidTo             string `json:"valid_to"`
 	Sgx_enabled         bool   `json:"sgx-enabled"`
 	Sgx_supported       bool   `json:"sgx-supported"`
@@ -89,7 +87,6 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		spec.TcbUpToDate = e.TcbUpToDate
 		spec.Epc_size = e.Epc_size
 		spec.Hostname = p1.Hostname
-		spec.Trusted = e.Trusted
 		spec.ValidTo = e.ValidTo
 		hostSpecArr = append(hostSpecArr, spec)
 	}

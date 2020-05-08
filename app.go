@@ -241,7 +241,7 @@ func (a *App) Run(args []string) error {
 	switch cmd {
 	default:
 		a.printUsage()
-		fmt.Fprintf(os.Stderr, "Unrecognized command: %s\n", args[1])
+		fmt.Fprintf(os.Stderr, "Unrecognized command : %s\n", args[1])
 		os.Exit(1)
 	case "list":
 		if len(args) < 3 {
@@ -329,11 +329,11 @@ func (a *App) Run(args []string) error {
 		setupRunner := &setup.Runner{
 			Tasks: []setup.Task{
 				setup.Download_Ca_Cert{
-					Flags:         flags,
-					CmsBaseURL:    a.Config.CMSBaseUrl,
-					CaCertDirPath: constants.TrustedCAsStoreDir,
+					Flags:                flags,
+					CmsBaseURL:           a.Config.CMSBaseUrl,
+					CaCertDirPath:        constants.TrustedCAsStoreDir,
 					TrustedTlsCertDigest: a.Config.CmsTlsCertDigest,
-					ConsoleWriter: os.Stdout,
+					ConsoleWriter:        os.Stdout,
 				},
 				setup.Download_Cert{
 					Flags:              flags,
@@ -343,7 +343,7 @@ func (a *App) Run(args []string) error {
 					KeyAlgorithmLength: constants.DefaultKeyAlgorithmLength,
 					CmsBaseURL:         a.Config.CMSBaseUrl,
 					Subject: pkix.Name{
-						CommonName:   a.Config.Subject.TLSCertCommonName,
+						CommonName: a.Config.Subject.TLSCertCommonName,
 					},
 					SanList:       a.Config.CertSANList,
 					CertType:      "TLS",
@@ -381,24 +381,24 @@ func (a *App) Run(args []string) error {
 
 		sahUser, err := user.Lookup(constants.SAHUserName)
 		if err != nil {
-			return errors.Wrapf(err,"Could not find user '%s'", constants.SAHUserName)
+			return errors.Wrapf(err, "Could not find user '%s'", constants.SAHUserName)
 		}
 
 		uid, err := strconv.Atoi(sahUser.Uid)
 		if err != nil {
-			return errors.Wrapf(err,"Could not parse sah user uid '%s'", sahUser.Uid)
+			return errors.Wrapf(err, "Could not parse sah user uid '%s'", sahUser.Uid)
 		}
 
 		gid, err := strconv.Atoi(sahUser.Gid)
 		if err != nil {
-			return errors.Wrapf(err,"Could not parse sah user gid '%s'", sahUser.Gid)
+			return errors.Wrapf(err, "Could not parse sah user gid '%s'", sahUser.Gid)
 		}
 
 		//Change the file ownership to sah user
 
 		err = cos.ChownR(constants.ConfigDir, uid, gid)
 		if err != nil {
-			return errors.Wrap(err,"Error while changing file ownership")
+			return errors.Wrap(err, "Error while changing file ownership")
 		}
 		if task == "download_cert" {
 			err = os.Chown(a.Config.TLSKeyFile, uid, gid)
@@ -466,10 +466,10 @@ func (a *App) startServer() error {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	httpLog := stdlog.New(a.httpLogWriter(), "", 0)
 	h := &http.Server{
-		Addr:      fmt.Sprintf(":%d", c.Port),
-		Handler:   handlers.RecoveryHandler(handlers.RecoveryLogger(httpLog), handlers.PrintRecoveryStack(true))(handlers.CombinedLoggingHandler(a.httpLogWriter(), r)),
-		ErrorLog:  httpLog,
-		TLSConfig: tlsconfig,
+		Addr:              fmt.Sprintf(":%d", c.Port),
+		Handler:           handlers.RecoveryHandler(handlers.RecoveryLogger(httpLog), handlers.PrintRecoveryStack(true))(handlers.CombinedLoggingHandler(a.httpLogWriter(), r)),
+		ErrorLog:          httpLog,
+		TLSConfig:         tlsconfig,
 		ReadTimeout:       c.ReadTimeout,
 		ReadHeaderTimeout: c.ReadHeaderTimeout,
 		WriteTimeout:      c.WriteTimeout,

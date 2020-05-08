@@ -40,7 +40,6 @@ type PlatformData struct {
 	Flc_enabled   bool   `json:"flc-enabled"`
 	TcbUpToDate   bool   `json:"tcbUpToDate"`
 	Epc_size      string `json:"epc-size"`
-	Trusted       bool   `json:"trusted"`
 	ValidTo       string `json:"valid_to"`
 }
 
@@ -284,7 +283,6 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 	hostPlatformData.TcbUpToDate = h1.TCBUpToDate
 	hostPlatformData.Epc_size = h1.EPCSize
 	hostPlatformData.Epc_size = strings.Replace(hostPlatformData.Epc_size, " ", "", -1) ///This is so because in K8S CRD can't have spaces
-	hostPlatformData.Trusted = true
 	hostPlatformData.ValidTo = "2021-08-28T13:05:05.932Z"
 
 	log.Debug("hostPlatformData: ", hostPlatformData)
