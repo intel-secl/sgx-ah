@@ -54,7 +54,7 @@ func ValidateInput(tenant Tenant) string {
 		errors = append(errors, "Tenant name can only contain alphanumeric and special characters (. _ -). Only 31 characters are allowed")
 	}
 
-	var errorMessageEmptyNameAdded, errorMessageNameRegexAdded, errorMessageKeyAdded, errorMessageValueAdded, invalidPluginProperty bool
+	var errorMessageEmptyNameAdded, errorMessageNameRegexAdded, emptyPropertiesAdded, errorMessageKeyAdded, errorMessageValueAdded, invalidPluginProperty bool
 
 	if (tenant.Plugins == nil) || len(tenant.Plugins) == 0 {
 		errors = append(errors, "Plugin information is mandatory")
@@ -68,29 +68,33 @@ func ValidateInput(tenant Tenant) string {
 			validationErr = ValidateNameString(plugin.PluginName)
 			if !errorMessageNameRegexAdded && validationErr != nil {
 				errors = append(errors, "Plugin name can only contain alphanumeric and special characters (. _ -). Only 31 characters are allowed")
-				errorMessageNameRegexAdded=true
+				errorMessageNameRegexAdded = true
 			}
 
+			if (plugin.Properties == nil) || len(plugin.Properties) == 0 {
+				errors = append(errors, "Plugin properties are mandatory")
+				emptyPropertiesAdded = true
+			}
 			for _, property := range plugin.Properties {
 				if !errorMessageKeyAdded && property.Key == "" {
 					errors = append(errors, "Plugin property key cannot be empty")
-					errorMessageKeyAdded=true
+					errorMessageKeyAdded = true
 				}
 				if !errorMessageValueAdded && property.Value == "" {
 					errors = append(errors, "Plugin property value cannot be empty")
-					errorMessageValueAdded=true
+					errorMessageValueAdded = true
 				}
 				validationErr = ValidateKeyString(property.Key)
 				if !errorMessageKeyAdded && validationErr != nil {
-					errors = append(errors, "Plugin property key can only contain alphanumeric and special characters (. _ -). Only 31 characters are allowed")
-					errorMessageKeyAdded=true
+					errors = append(errors, "Plugin property key can only contain alphanumeric and special characters (. _ -)")
+					errorMessageKeyAdded = true
 				}
 				validationErr = ValidateXSSString(property.Value)
 				if !errorMessageValueAdded && validationErr != nil {
 					errors = append(errors, "Invalid plugin property value")
-					errorMessageValueAdded=true
+					errorMessageValueAdded = true
 				}
-				if errorMessageEmptyNameAdded || errorMessageNameRegexAdded || errorMessageKeyAdded || errorMessageValueAdded {
+				if errorMessageEmptyNameAdded || errorMessageNameRegexAdded || emptyPropertiesAdded || errorMessageKeyAdded || errorMessageValueAdded {
 					invalidPluginProperty = true
 					break
 				}
