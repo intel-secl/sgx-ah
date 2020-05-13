@@ -94,12 +94,27 @@ func GetApi(requestType string, url string) (*http.Response, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetApi: Error while caching Host Status Information: "+err.Error())
+		return nil, errors.Wrap(err, "resource/utils: GetApi() Error from response")
 	}
 	log.Debug("FetchAllHostsFromHVS: Status: ", resp.StatusCode)
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		// fetch token and try again
+		aasRWLock.Lock()
+		aasClient.FetchAllTokens()
+		aasRWLock.Unlock()
+		err = addJWTToken(req)
+		if err != nil {
+			return nil, errors.Wrap(err, "resource/utils: GetApi() Failed to add JWT token")
+		}
+		resp, err = client.Do(req)
+		if err != nil {
+			return nil, errors.Wrap(err, "resource/utils: GetApi() Error from response")
+		}
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("GetApi: Invalid status code received:%d", resp.StatusCode))
+		return nil, errors.Wrapf(err,"resource/utils: GetApi() Invalid status code received:%d", resp.StatusCode)
 	}
 	return resp, nil
 }
