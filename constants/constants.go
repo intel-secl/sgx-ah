@@ -43,7 +43,8 @@ const (
 	DefaultDBRotationMaxRowCnt       = 100000
 	DefaultDBRotationMaxTableCnt     = 10
 	DefaultSSLCertFilePath           = ConfigDir + "sgx-attestation-hub-dbcert.pem"
-	ServiceName                      = "sgx-attestation-hub"
+	ServiceName                      = "SAH"
+	TenantManagerGroupName           = "TenantManager"
 	SAHUserName                      = "sah"
 	DefaultHttpPort                  = 9443
 	DefaultKeyAlgorithm              = "rsa"
