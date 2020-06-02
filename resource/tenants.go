@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"intel/isecl/sgx-attestation-hub/constants"
 	consts "intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
@@ -136,11 +135,6 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/tenant:registerTenant() Entering")
 		defer log.Trace("resource/tenant:registerTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
-		if err != nil {
-			return err
-		}
-
 		var tenant Tenant
 
 		if r.ContentLength == 0 {
@@ -149,7 +143,7 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
-		err = dec.Decode(&tenant)
+		err := dec.Decode(&tenant)
 		if err != nil {
 			log.WithError(err).Info("registerTenant() Error decoding request input")
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}

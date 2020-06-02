@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v2/validation"
-	"intel/isecl/sgx-attestation-hub/constants"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
 	"net/http"
@@ -102,11 +101,6 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: createHostTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: createHostTenantMapping() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
-		if err != nil {
-			return err
-		}
-
 		var input HostTenantMappingRequest
 
 		if r.ContentLength == 0 {
@@ -115,7 +109,7 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
-		err = dec.Decode(&input)
+		err := dec.Decode(&input)
 		if err != nil {
 			log.WithError(err).Info("createHostTenantMapping() Error decoding request input")
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
