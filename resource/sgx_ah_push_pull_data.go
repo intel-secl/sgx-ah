@@ -135,7 +135,8 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 
 	numberOfHostsUpdated := len(hostPlatformData)
 	if numberOfHostsUpdated == 0 {
-		return errors.New(fmt.Sprintf("FetchHostRegisteredInLastFewMinutes: Number of host: %d", numberOfHostsUpdated))
+		log.Infof("FetchHostRegisteredInLastFewMinutes: No hosts have been updated")
+		return nil
 	}
 	// below code to fetch platform data for each host
 	for i := 0; i < 1; i++ { // numberOfHostsUpdated; i++ {

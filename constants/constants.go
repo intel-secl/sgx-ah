@@ -22,7 +22,7 @@ const (
 	ConfigFile                       = "config.yml"
 	DefaultTLSCertFile               = ConfigDir + "tls-cert.pem"
 	DefaultTLSKeyFile                = ConfigDir + "tls.key"
-	HubTimeStamp                     = "HubSchedulerRun.txt"
+	LastRunTimeStampFile             = "HubSchedulerRun.txt"
 	TrustedJWTSigningCertsDir        = ConfigDir + "certs/trustedjwt/"
 	TrustedCAsStoreDir               = ConfigDir + "certs/trustedca/"
 	ServiceRemoveCmd                 = "systemctl disable sgx-attestation-hub"
@@ -57,7 +57,7 @@ const (
 	NovaPluginUserPassword           = "user.password"
 	KubernetesClientKeystorePassword = "kubernetes.client.keystore.password"
 	KubernetesServerKeystorePassword = "kubernetes.server.keystore.password"
-	DefaultSAHSchedulerTimer         = 50
+	DefaultSAHSchedulerTimer         = 120
 	DefaultSAHRefreshHours           = 24
 	DefaultJwtValidateCacheKeyMins   = 60
 	PublickeyLocation                = ConfigDir + "sgx_hub_public_key.pem"
