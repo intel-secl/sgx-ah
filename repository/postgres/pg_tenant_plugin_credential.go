@@ -57,6 +57,18 @@ func (r *PostgresTenantPluginCredentialRepository) RetrieveAll(p types.TenantPlu
 	return ps, nil
 }
 
+func (r *PostgresTenantPluginCredentialRepository) RetrieveByTenantId(tenantId string) (types.TenantPluginCredentials, error) {
+	log.Trace("repository/postgres/pg_tenant_plugin_credential: RetrieveByTenantId() Entering")
+	defer log.Trace("repository/postgres/pg_tenant_plugin_credential: RetrieveByTenantId() Leaving")
+
+	var ps types.TenantPluginCredentials
+	err := r.db.Where("tenant_uuid = (?)", tenantId).Find(&ps).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "RetrieveByTenantId(): failed to retrieve all Tenant Plugin Credentials by tenant id")
+	}
+	return ps, nil
+}
+
 func (r *PostgresTenantPluginCredentialRepository) Update(p types.TenantPluginCredential) error {
 	log.Trace("repository/postgres/pg_tenant_plugin_credential: Update() Entering")
 	defer log.Trace("repository/postgres/pg_tenant_plugin_credential: Update() Leaving")

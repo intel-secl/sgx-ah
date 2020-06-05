@@ -10,6 +10,7 @@ type TenantPluginCredentialRepository interface {
 	Create(types.TenantPluginCredential) (*types.TenantPluginCredential, error)
 	Retrieve(types.TenantPluginCredential) (*types.TenantPluginCredential, error)
 	RetrieveAll(types.TenantPluginCredential) (types.TenantPluginCredentials, error)
+	RetrieveByTenantId(string) (types.TenantPluginCredentials, error)
 	Update(types.TenantPluginCredential) error
 	Delete(types.TenantPluginCredential) error
 }

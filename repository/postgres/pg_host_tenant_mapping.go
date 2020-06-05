@@ -57,14 +57,14 @@ func (r *PostgresHostTenantMappingRepository) RetrieveAll(m types.HostTenantMapp
 	return ms, nil
 }
 
-func (r *PostgresHostTenantMappingRepository) Update(m types.HostTenantMapping) error {
+func (r *PostgresHostTenantMappingRepository) Update(m types.HostTenantMapping) (*types.HostTenantMapping, error) {
 	log.Trace("repository/postgres/pg_host_tenant_mapping: Update() Entering")
 	defer log.Trace("repository/postgres/pg_host_tenant_mapping: Update() Leaving")
 
 	if err := r.db.Save(&m).Error; err != nil {
-		return errors.Wrap(err, "Update(): failed to update Host Tenant Mapping")
+		return nil, errors.Wrap(err, "Update(): failed to update Host Tenant Mapping")
 	}
-	return nil
+	return &m, nil
 }
 
 func (r *PostgresHostTenantMappingRepository) Delete(m types.HostTenantMapping) error {

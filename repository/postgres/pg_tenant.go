@@ -5,7 +5,6 @@
 package postgres
 
 import (
-	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
 
 	"github.com/jinzhu/gorm"
@@ -20,13 +19,7 @@ func (r *PostgresTenantRepository) Create(t types.Tenant) (*types.Tenant, error)
 	log.Trace("repository/postgres/pg_tenant: Create() Entering")
 	defer log.Trace("repository/postgres/pg_tenant: Create() Leaving")
 
-	uuid, err := repository.UUID()
-	if err == nil {
-		t.Id = uuid
-	} else {
-		return &t, errors.Wrap(err, "Create(): failed to get UUID")
-	}
-	err = r.db.Create(&t).Error
+	err := r.db.Create(&t).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "Create(): failed to create Tenant")
 	}
@@ -70,14 +63,14 @@ func (r *PostgresTenantRepository) RetrieveAllActiveTenants() (types.Tenants, er
 	return ts, nil
 }
 
-func (r *PostgresTenantRepository) Update(t types.Tenant) error {
+func (r *PostgresTenantRepository) Update(t types.Tenant) (*types.Tenant, error) {
 	log.Trace("repository/postgres/pg_tenant: Update() Entering")
 	defer log.Trace("repository/postgres/pg_tenant: Update() Leaving")
 
 	if err := r.db.Save(&t).Error; err != nil {
-		return errors.Wrap(err, "Update(): failed to update Tenant")
+		return nil, errors.Wrap(err, "Update(): failed to update Tenant")
 	}
-	return nil
+	return &t, nil
 }
 
 func (r *PostgresTenantRepository) Delete(t types.Tenant) error {

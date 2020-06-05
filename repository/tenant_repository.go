@@ -11,6 +11,6 @@ type TenantRepository interface {
 	Retrieve(types.Tenant) (*types.Tenant, error)
 	RetrieveAll(types.Tenant) (types.Tenants, error)
 	RetrieveAllActiveTenants() (types.Tenants, error)
-	Update(types.Tenant) error
+	Update(types.Tenant) (*types.Tenant, error)
 	Delete(types.Tenant) error
 }
