@@ -159,7 +159,7 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants:registerTenant() Entering")
 		defer log.Trace("resource/tenants:registerTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
