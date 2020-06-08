@@ -273,10 +273,10 @@ func (a *App) Run(args []string) error {
 		a.configureLogs(a.configuration().LogEnableStdout, true)
 		return a.start()
 	case "stop":
-		a.configureLogs(a.configuration().LogEnableStdout, false)
+		a.configureLogs(a.configuration().LogEnableStdout, true)
 		return a.stop()
 	case "status":
-		a.configureLogs(a.configuration().LogEnableStdout, false)
+		a.configureLogs(a.configuration().LogEnableStdout, true)
 		return a.status()
 	case "uninstall":
 		var purge bool
@@ -367,7 +367,6 @@ func (a *App) Run(args []string) error {
 			},
 			AskInput: false,
 		}
-		a.configureLogs(true, true)
 		if task == "all" {
 			err = setupRunner.RunTasks()
 		} else {
