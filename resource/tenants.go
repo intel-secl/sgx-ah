@@ -284,55 +284,6 @@ func getTenant(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-/*func getAllTenants(db repository.SAHDatabase) errorHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		log.Trace("resource/tenants: getAllTenants() Entering")
-		defer log.Trace("resource/tenants: getAllTenants() Leaving")
-
-		allTenants, err := db.TenantRepository().RetrieveAll()
-		log.Info("Retrieved tenant------------------------", allTenants)
-		if allTenants == nil || err != nil {
-			log.WithError(err).Info("resource/tenants: getAllTenants() Tenants do not exist")
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-		log.Info("Tenant retrieved successfully---------------------")
-
-		var tenantIn *Tenant
-		tenants := make([]Tenant, 0)
-		for _ , tenant := range allTenants {
-			if tenant.Deleted == true {
-				log.Debugf("resource/tenants: getAllTenants() tenant with id %s was deleted, hence not returning in the results", tenant.Id)
-				continue
-			}
-
-			config := tenant.Config
-			log.Info("config --------------------------", config)
-			err = json.Unmarshal([]byte(config), &tenantIn)
-			if err != nil {
-				return err
-			}
-
-			response := Tenant{
-				TenantId:      tenant.Id,
-				TenantName:    tenantIn.TenantName,
-				TenantDeleted: tenantIn.TenantDeleted,
-				Plugins:       tenantIn.Plugins,
-			}
-			tenants = append(tenants, response)
-		}
-		log.Info("tenant is not deleted----------------------")
-
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(tenants)
-			if err != nil {
-			return err
-		}
-		slog.WithField("tenant", tenants).Info("Tenant retrieved by:", r.RemoteAddr)
-		return nil
-	}
-}*/
-
 func queryTenants(db repository.SAHDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 

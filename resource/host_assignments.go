@@ -39,7 +39,6 @@ func SGXHostTenantMapping(r *mux.Router, db repository.SAHDatabase) {
 	r.Handle("/host-assignments", handlers.ContentTypeHandler(createHostTenantMapping(db), "application/json")).Methods("POST")
 	r.Handle("/host-assignments/{id}", getHostTenantMapping(db)).Methods("GET")
 	r.Handle("/host-assignments", queryHostTenantMappings(db)).Methods("GET")
-	r.Handle("/host-assignments/{id}", handlers.ContentTypeHandler(updateHostTenantMappings(db), "application/json")).Methods("PUT")
 	r.Handle("/host-assignments/{id}", deleteTenantMapping(db)).Methods("DELETE")
 }
 
@@ -59,7 +58,7 @@ func uniqueHostHardwareIDs(huuIds []string) []string {
 	return huuIdList
 }
 
-func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([]TenantHostMapping, error) {
+func createOrUpdateMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([]TenantHostMapping, error) {
 
 	log.Trace("resource/host_assignments: createMapping() Entering")
 	defer log.Trace("resource/host_assignments: createMapping() Leaving")
@@ -79,22 +78,56 @@ func createMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([
 			log.WithError(err).WithField("hardwareUUID", huuId).Info("createMapping() Host does not exist with hardware id provided")
 			return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
 		}
-		hostTenantMapping := types.HostTenantMapping{
-			HostHardwareUUID: huuId,
+
+		filter := types.HostTenantMapping{
 			TenantUUID:       input.TenantId,
-			CreatedTime:      time.Now(),
-			UpdatedTime:      time.Now(),
+			HostHardwareUUID: huuId,
 		}
-		mappingCreated, err := db.HostTenantMappingRepository().Create(hostTenantMapping)
-		if err != nil {
-			return nil, errors.Wrap(err, "resource/host_assignments: createMapping() Error while caching host tenant mapping information")
+		existingMap, err := db.HostTenantMappingRepository().Retrieve(filter)
+		if existingMap != nil && err == nil {
+			log.Infof("Mapping between tenant %s and host hardware uuid %s already exists", existingMap.TenantUUID, existingMap.HostHardwareUUID)
+			if existingMap.Deleted == true {
+				log.Infof("The mapping %s was deleted earlier. Reactivating it instead of creating a new one", existingMap.Id)
+				hostTenantMap := types.HostTenantMapping{
+					Id:               existingMap.Id,
+					HostHardwareUUID: existingMap.HostHardwareUUID,
+					TenantUUID:       existingMap.TenantUUID,
+					CreatedTime:      existingMap.CreatedTime,
+					UpdatedTime:      time.Now(),
+					Deleted:          false,
+				}
+				_, err := db.HostTenantMappingRepository().Update(hostTenantMap)
+				if err != nil {
+					return nil, errors.Wrap(err, "resource/host_assignments: createMapping() Error while updating host tenant mapping information")
+				}
+			} else {
+				log.Infof("Mapping %s is still active. Not creating a new entry", existingMap.Id)
+			}
+			//uniqueHuuIdList = append(uniqueHuuIdList[:index], uniqueHuuIdList[index+1:]...)
+			mapping := TenantHostMapping{
+				MappingId:    existingMap.Id,
+				TenantId:     input.TenantId,
+				HardwareUUID: huuId,
+			}
+			mappingResponse.Mapping = append(mappingResponse.Mapping, mapping)
+		} else {
+			hostTenantMapping := types.HostTenantMapping{
+				HostHardwareUUID: huuId,
+				TenantUUID:       input.TenantId,
+				CreatedTime:      time.Now(),
+				UpdatedTime:      time.Now(),
+			}
+			mappingCreated, err := db.HostTenantMappingRepository().Create(hostTenantMapping)
+			if err != nil {
+				return nil, errors.Wrap(err, "resource/host_assignments: createMapping() Error while caching host tenant mapping information")
+			}
+			mapping := TenantHostMapping{
+				MappingId:    mappingCreated.Id,
+				TenantId:     input.TenantId,
+				HardwareUUID: huuId,
+			}
+			mappingResponse.Mapping = append(mappingResponse.Mapping, mapping)
 		}
-		mapping := TenantHostMapping{
-			MappingId:    mappingCreated.Id,
-			TenantId:     input.TenantId,
-			HardwareUUID: huuId,
-		}
-		mappingResponse.Mapping = append(mappingResponse.Mapping, mapping)
 	}
 	return mappingResponse.Mapping, nil
 }
@@ -146,7 +179,7 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 			}
 		}
 
-		mappingRes, err := createMapping(db, input)
+		mappingRes, err := createOrUpdateMapping(db, input)
 		if err != nil {
 			return err
 		}
@@ -259,131 +292,6 @@ func queryHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
 			return &resourceError{Message: "Failed to search mapping - JSON encode failed", StatusCode: http.StatusInternalServerError}
 		}
 		slog.Infof("Return tenant query to: %s", r.RemoteAddr)
-		return nil
-	}
-}
-
-func updateMapping(db repository.SAHDatabase, input HostTenantMappingRequest, id string, mapping *types.HostTenantMapping) ([]TenantHostMapping, error) {
-
-	log.Trace("resource/host_assignments: updateMapping() Entering")
-	defer log.Trace("resource/host_assignments: updateMapping() Leaving")
-
-	var mappingResponse HostTenantMappingResponse
-	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId})
-	if err != nil {
-		log.WithError(err).WithField("id", input.TenantId).Info("resource/host_assignments: updateMapping() Tenant does not exist with id provided")
-		return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
-	}
-
-	uniqueHuuIdList := uniqueHostHardwareIDs(input.HardwareUUID)
-
-	for _, huuId := range uniqueHuuIdList {
-		_, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: huuId})
-		if err != nil {
-			log.WithError(err).WithField("hardwareUUID", huuId).Info("resource/host_assignments: updateMapping() Host does not exist with hardware id provided")
-			return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
-		}
-		hostTenantMapping := types.HostTenantMapping{
-			Id:               id,
-			HostHardwareUUID: huuId,
-			TenantUUID:       input.TenantId,
-			CreatedTime:      mapping.CreatedTime,
-			UpdatedTime:      time.Now(),
-		}
-		mappingCreated, err := db.HostTenantMappingRepository().Update(hostTenantMapping)
-		if err != nil {
-			return nil, errors.Wrap(err, "resource/host_assignments: updateMapping() Error while caching host tenant mapping information")
-		}
-		mapping := TenantHostMapping{
-			MappingId:    mappingCreated.Id,
-			TenantId:     input.TenantId,
-			HardwareUUID: huuId,
-		}
-		mappingResponse.Mapping = append(mappingResponse.Mapping, mapping)
-	}
-	return mappingResponse.Mapping, nil
-}
-
-func updateHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-
-		log.Trace("resource/host_assignments: updateHostTenantMappings() Entering")
-		defer log.Trace("resource/host_assignments: updateHostTenantMappings() Leaving")
-
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
-		if err != nil {
-			return err
-		}
-
-		var mapping HostTenantMappingRequest
-
-		id := mux.Vars(r)["id"]
-		validationErr := validation.ValidateUUIDv4(id)
-		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/host_assignments: updateHostTenantMappings() Error validating mapping Id")
-			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
-		}
-		m, err := db.HostTenantMappingRepository().Retrieve(types.HostTenantMapping{Id: id})
-		if m == nil || err != nil {
-			log.WithError(err).WithField("id", id).Info("resource/host_assignments: updateHostTenantMappings() mapping with specified id does not exist")
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-
-		if m.Deleted == true {
-			log.Errorf("resource/host_assignments: updateHostTenantMappings() mapping with id %s was deleted", id)
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-
-		if r.ContentLength == 0 {
-			return &resourceError{Message: "The request body was not provided", StatusCode: http.StatusBadRequest}
-		}
-
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		err = dec.Decode(&mapping)
-		if err != nil {
-			log.WithError(err).Info("resource/host_assignments: updateHostTenantMappings() Error decoding request input")
-			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
-		}
-
-		if mapping.TenantId == "" {
-			return &resourceError{Message: "tenant uuid information is mandatory", StatusCode: http.StatusBadRequest}
-		}
-
-		if mapping.HardwareUUID == nil || len(mapping.HardwareUUID) == 0 {
-			return &resourceError{Message: "hardware uuid information is mandatory", StatusCode: http.StatusBadRequest}
-		}
-
-		validationErr = validation.ValidateUUIDv4(mapping.TenantId)
-		if validationErr != nil {
-			log.WithError(validationErr).WithField("tenant id", mapping.TenantId).Info("resource/host_assignments: updateHostTenantMappings() Error validating tenant Id")
-			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
-		}
-
-		for _, huuid := range mapping.HardwareUUID {
-			validationErr = validation.ValidateHardwareUUID(huuid)
-			if validationErr != nil {
-				log.WithError(validationErr).WithField("tenant id", mapping.TenantId).Info("resource/host_assignments: updateHostTenantMappings() Error validating host hardware UUID")
-				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
-			}
-		}
-		mappingRes, err := updateMapping(db, mapping, id, m)
-		if err != nil {
-			return err
-		}
-
-		mappingResponse := HostTenantMappingResponse {
-			Mapping:mappingRes,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(mappingResponse)
-		if err != nil {
-			log.WithError(err).Errorf("resource/host_assignments: updateHostTenantMappings() %s : Unexpectedly failed to encode update mapping response to JSON", message.AppRuntimeErr)
-			log.Tracef("%+v", err)
-			return &resourceError{Message: "Failed to update mapping - JSON encode failed", StatusCode: http.StatusInternalServerError}
-		}
 		return nil
 	}
 }
