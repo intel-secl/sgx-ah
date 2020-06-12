@@ -235,6 +235,11 @@ func getTenant(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants: getTenant() Entering")
 		defer log.Trace("resource/tenants: getTenant() Leaving")
 
+		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
+
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
@@ -334,6 +339,11 @@ func queryTenants(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants:queryTenants() Entering")
 		defer log.Trace("resource/tenants:queryTenants() Leaving")
 
+		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
+
 		// check for query parameters
 		log.WithField("query", r.URL.Query()).Trace("query tenants")
 		tenantName := r.URL.Query().Get("nameEqualTo")
@@ -394,6 +404,11 @@ func updateTenant(db repository.SAHDatabase) errorHandlerFunc {
 
 		log.Trace("resource/tenants:updateTenant() Entering")
 		defer log.Trace("resource/tenants:updateTenant() Leaving")
+
+		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
 
 		var tenant Tenant
 
@@ -491,6 +506,11 @@ func deleteTenant(db repository.SAHDatabase) errorHandlerFunc {
 
 		log.Trace("resource/tenants: deleteTenant() Entering")
 		defer log.Trace("resource/tenants: deleteTenant() Leaving")
+
+		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
 
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)

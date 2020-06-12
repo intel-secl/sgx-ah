@@ -171,6 +171,11 @@ func getHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: getHostTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: getHostTenantMapping() Leaving")
 
+		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
+
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
@@ -208,6 +213,11 @@ func queryHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
 
 		log.Trace("resource/host_assignments: queryHostTenantMappings() Entering")
 		defer log.Trace("resource/host_assignments: queryHostTenantMappings() Leaving")
+
+		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
 
 		log.WithField("query", r.URL.Query()).Trace("query mappings")
 		tenantUUID := r.URL.Query().Get("tenant_id")
@@ -300,6 +310,11 @@ func updateHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: updateHostTenantMappings() Entering")
 		defer log.Trace("resource/host_assignments: updateHostTenantMappings() Leaving")
 
+		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
+
 		var mapping HostTenantMappingRequest
 
 		id := mux.Vars(r)["id"]
@@ -378,6 +393,11 @@ func deleteTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 
 		log.Trace("resource/host_assignments: deleteTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: deleteTenantMapping() Leaving")
+
+		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		if err != nil {
+			return err
+		}
 
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
