@@ -85,9 +85,9 @@ func createOrUpdateMapping(db repository.SAHDatabase, input HostTenantMappingReq
 		}
 		existingMap, err := db.HostTenantMappingRepository().Retrieve(filter)
 		if existingMap != nil && err == nil {
-			log.Infof("Mapping between tenant %s and host hardware uuid %s already exists", existingMap.TenantUUID, existingMap.HostHardwareUUID)
+			log.Debugf("Mapping between tenant %s and host hardware uuid %s already exists", existingMap.TenantUUID, existingMap.HostHardwareUUID)
 			if existingMap.Deleted == true {
-				log.Infof("The mapping %s was deleted earlier. Reactivating it instead of creating a new one", existingMap.Id)
+				log.Debugf("The mapping %s was deleted earlier. Reactivating it instead of creating a new one", existingMap.Id)
 				hostTenantMap := types.HostTenantMapping{
 					Id:               existingMap.Id,
 					HostHardwareUUID: existingMap.HostHardwareUUID,
@@ -101,7 +101,7 @@ func createOrUpdateMapping(db repository.SAHDatabase, input HostTenantMappingReq
 					return nil, errors.Wrap(err, "resource/host_assignments: createMapping() Error while updating host tenant mapping information")
 				}
 			} else {
-				log.Infof("Mapping %s is still active. Not creating a new entry", existingMap.Id)
+				log.Debugf("Mapping %s is still active. Not creating a new entry", existingMap.Id)
 			}
 			//uniqueHuuIdList = append(uniqueHuuIdList[:index], uniqueHuuIdList[index+1:]...)
 			mapping := TenantHostMapping{
