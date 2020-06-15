@@ -40,7 +40,7 @@ type PlatformData struct {
 	Flc_enabled   bool   `json:"flc-enabled"`
 	TcbUpToDate   bool   `json:"tcbUpToDate"`
 	Epc_size      string `json:"epc-size"`
-	ValidTo       string `json:"valid_to"`
+	ValidTo       string `json:"validTo"`
 }
 
 type Plugin1 types.Plugin

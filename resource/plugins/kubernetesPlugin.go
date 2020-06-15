@@ -33,7 +33,7 @@ type PlatformData struct {
 	Flc_enabled   bool   `json:"flc-enabled"`
 	TcbUpToDate   bool   `json:"tcbUpToDate"`
 	Epc_size      string `json:"epc-size"`
-	ValidTo       string `json:"valid_to"`
+	ValidTo       string `json:"validTo"`
 }
 
 type HostAttributesMetadata struct {
@@ -52,7 +52,7 @@ type HostAttributesCRD struct {
 }
 
 type HostAttributesSpec struct {
-	ValidTo             string `json:"valid_to"`
+	ValidTo             string `json:"validTo"`
 	Sgx_enabled         bool   `json:"sgx-enabled"`
 	Sgx_supported       bool   `json:"sgx-supported"`
 	Flc_enabled         bool   `json:"flc-enabled"`
