@@ -5,7 +5,6 @@
 package postgres
 
 import (
-	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
 
 	"github.com/jinzhu/gorm"
@@ -20,13 +19,7 @@ func (r *PostgresHostRepository) Create(h types.Host) (*types.Host, error) {
 	log.Trace("repository/postgres/pg_host: Create() Entering")
 	defer log.Trace("repository/postgres/pg_host: Create() Leaving")
 
-	uuid, err := repository.UUID()
-	if err == nil {
-		h.Id = uuid
-	} else {
-		return &h, errors.Wrap(err, "Create(): failed to get UUID")
-	}
-	err = r.db.Create(&h).Error
+	err := r.db.Create(&h).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "Create(): failed to create Host")
 	}

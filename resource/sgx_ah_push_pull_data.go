@@ -2,17 +2,16 @@ package resource
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 	"intel/isecl/sgx-attestation-hub/config"
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/types"
-	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
-type HostPlaformData struct {
+type HostPlatformData struct {
 	Id           string `json:"host_id" gorm:"type:uuid;unique;primary_key;"`
 	SGXSupported bool   `json:"sgx_supported"`
 	SGXEnabled   bool   `json:"sgx_enabled"`
@@ -21,7 +20,7 @@ type HostPlaformData struct {
 	TCBUpToDate  bool   `json:"tcb_upToDate"`
 }
 
-type HostPlaformDataArray []HostPlaformData
+type HostPlatformDataArray []HostPlatformData
 
 type HostBasicInfo struct {
 	Id            string `json:"host_id" gorm:"type:uuid;unique;primary_key;"`
@@ -33,145 +32,171 @@ type HostBasicInfo struct {
 type HostBasicInfoArray []HostBasicInfo
 
 func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
+	log.Trace("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Entering")
+	defer log.Trace("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Leaving")
 
 	conf := config.Global()
-
 	if conf == nil {
-		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Failed to Load configuratoin"))
+		return errors.New("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Failed to Load configuration")
 	}
 
 	getSHVSUrl := conf.ShvsBaseUrl + "hosts"
 	SHVSUrl, parseErr := url.Parse(getSHVSUrl)
 	if parseErr != nil {
-		return errors.Wrap(parseErr, "FetchAllHostsFromHVS() : Configured SHVS URL is malformed")
+		return errors.Wrap(parseErr, "resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Configured SHVS URL is malformed")
 	}
-	var resp, err = GetApi("GET", SHVSUrl.String())
 
-	if resp == nil {
-		return errors.Wrap(err, "FetchAllHostsFromHVS: nil response received")
-	} else if resp.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Invalid status code received:%d", resp.StatusCode))
-	} else if err != nil {
-		return errors.Wrap(err, "FetchAllHostsFromHVS: Error fetching hosts from HVS")
+	resp, err := GetApi("GET", SHVSUrl.String())
+	if err != nil {
+		return errors.Wrap(err, "resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error fetching hosts from HVS")
 	}
 
 	var hvsResponse HostBasicInfoArray
 	dec := json.NewDecoder(resp.Body)
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&hvsResponse)
-	log.WithError(err).Info("FetchAllHostsFromHVS decode return the error")
-	numberOfHosts := len(hvsResponse)
-	log.Debug("FetchAllHostsFromHVS: Total Number of Hosts: ", numberOfHosts)
+	if err != nil {
+		return errors.Wrap(err,"resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error decoding host info response from HVS")
+	}
 
-	if numberOfHosts <= 0 {
-		return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Number of host:%d", numberOfHosts))
+	numberOfHosts := len(hvsResponse)
+	log.Debug("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Total Number of Hosts: ", numberOfHosts)
+	if numberOfHosts == 0 {
+		return errors.New("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() No hosts have been retrieved from HVS")
 	}
 
 	for i := 0; i < numberOfHosts; i++ {
 		url := conf.ShvsBaseUrl + "platform-data?HostName=" + hvsResponse[i].HostName
 		response, err := GetApi("GET", url)
-		if response == nil {
-			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: nil response"))
-		} else if err != nil {
-			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Error :", err))
+		if err != nil {
+			log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error fetching platform data of the host %s from HVS", hvsResponse[i].HostName)
+			continue
 		}
 
-		var platformDataResp HostPlaformDataArray
+		var platformDataResp HostPlatformDataArray
 		dec := json.NewDecoder(response.Body)
 		dec.DisallowUnknownFields()
 		err = dec.Decode(&platformDataResp)
-		log.Debug("FetchAllHostsFromHVS: Number of platform data fetched id ", len(platformDataResp))
-		if len(platformDataResp) <= 0 {
-			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Error Platform data fetched is : %d", len(platformDataResp)))
+		if err != nil {
+			log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error decoding platform data response from HVS of host %s", hvsResponse[i].HostName)
+			continue
 		}
 
-		host := types.Host{
-			Id:            hvsResponse[i].Id,
-			HostName:      hvsResponse[i].HostName,
-			ConnectionURL: hvsResponse[i].ConnectionURL,
-			HardwareUUID:  hvsResponse[i].HardwareUUID,
-			SGXSupported:  platformDataResp[0].SGXSupported,
-			SGXEnabled:    platformDataResp[0].SGXEnabled,
-			FLCEnabled:    platformDataResp[0].FLCEnabled,
-			EPCSize:       platformDataResp[0].EPCSize,
-			TCBUpToDate:   platformDataResp[0].TCBUpToDate,
+		log.Debug("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Number of platform data fetched id ", len(platformDataResp))
+		if len(platformDataResp) == 0 {
+			log.Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() No platform data for the host %s has been retrieved from HVS", hvsResponse[i].HostName)
+			continue
 		}
 
-		if sahDB == nil {
-			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Error: sahDB", sahDB))
-		}
+		hostByHUUID, _ := sahDB.HostRepository().Retrieve(types.Host{HardwareUUID: hvsResponse[i].HardwareUUID})
+		if hostByHUUID != nil {
+			host := types.Host{
+				Id:            hvsResponse[i].Id,
+				HostName:      hvsResponse[i].HostName,
+				ConnectionURL: hvsResponse[i].ConnectionURL,
+				HardwareUUID:  hostByHUUID.HardwareUUID,
+				CreatedTime:   hostByHUUID.CreatedTime,
+				UpdatedTime:   time.Now(),
+				SGXSupported:  platformDataResp[0].SGXSupported,
+				SGXEnabled:    platformDataResp[0].SGXEnabled,
+				FLCEnabled:    platformDataResp[0].FLCEnabled,
+				EPCSize:       platformDataResp[0].EPCSize,
+				TCBUpToDate:   platformDataResp[0].TCBUpToDate,
+			}
+			err = sahDB.HostRepository().Update(host)
+			if err != nil{
+				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error updating host record of host %s in DB", hvsResponse[i].HostName)
+				continue
+			}
+		} else {
+			host := types.Host{
+				Id:            hvsResponse[i].Id,
+				HostName:      hvsResponse[i].HostName,
+				ConnectionURL: hvsResponse[i].ConnectionURL,
+				HardwareUUID:  hvsResponse[i].HardwareUUID,
+				CreatedTime:   time.Now(),
+				UpdatedTime:   time.Now(),
+				SGXSupported:  platformDataResp[0].SGXSupported,
+				SGXEnabled:    platformDataResp[0].SGXEnabled,
+				FLCEnabled:    platformDataResp[0].FLCEnabled,
+				EPCSize:       platformDataResp[0].EPCSize,
+				TCBUpToDate:   platformDataResp[0].TCBUpToDate,
+			}
+			_, err = sahDB.HostRepository().Create(host)
+			if err != nil {
+				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error creating host record of host %s in DB", hvsResponse[i].HostName)
+				continue
 
-		_, dbErr := sahDB.HostRepository().Create(host)
-
-		if dbErr != nil {
-			return errors.New(fmt.Sprintf("FetchAllHostsFromHVS: Error: ", dbErr, host))
+			}
 		}
 	}
 	return err
 }
 
 func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefreshTimeInMinutes int) error {
+	log.Trace("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Entering")
+	defer log.Trace("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Leaving")
 
-	//Below code to fetch all host in last  minutes(hostRefreshTimeInMinutes)
+	//Below code to fetch all hosts updated/registered in last few minutes(hostRefreshTimeInMinutes)
 	conf := config.Global()
-
 	if conf == nil {
-		return errors.New(fmt.Sprintf("FetchHostRegisteredInLastFewMinutes: Unable to load conf:", conf))
+		return errors.New("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Unable to load configuration")
 	}
 
 	getSahUrl := conf.ShvsBaseUrl + "platform-data?numberOfMinutes=" + strconv.Itoa(hostRefreshTimeInMinutes)
-	var resp, err = GetApi("GET", getSahUrl)
-
-	if resp == nil || err != nil {
-		return errors.New(fmt.Sprintf("FetchHostRegisteredInLastFewMinutes: Error: ", err, " response: ", resp))
-	} else if resp.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("FetchHostRegisteredInLastFewMinutes: Invalid status code received:%d", resp.StatusCode))
+	resp, err := GetApi("GET", getSahUrl)
+	if err != nil {
+		return errors.Wrap(err,"resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching platform data of the hosts updated/registered in last few minutes")
 	}
+
 	// here we are converting Http response in struct
-	var hostPlatformData HostPlaformDataArray
+	var hostPlatformData HostPlatformDataArray
 	dec := json.NewDecoder(resp.Body)
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&hostPlatformData)
+	if err != nil {
+		return errors.Wrap(err, "resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error decoding platform data response from HVS")
+	}
 
 	numberOfHostsUpdated := len(hostPlatformData)
 	if numberOfHostsUpdated == 0 {
-		log.Infof("FetchHostRegisteredInLastFewMinutes: No hosts have been updated")
+		log.Info("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() No hosts have been updated")
 		return nil
 	}
+
 	// below code to fetch platform data for each host
-	for i := 0; i < 1; i++ { // numberOfHostsUpdated; i++ {
-		getSahUrl = conf.ShvsBaseUrl + "hosts/" + hostPlatformData[0].Id
+	for i := 0; i < numberOfHostsUpdated; i++ {
+		getSahUrl = conf.ShvsBaseUrl + "hosts/" + hostPlatformData[i].Id
 		response, err := GetApi("GET", getSahUrl)
 		if err != nil {
-			log.WithError(err).Info("error while getting the platform data from SGX-HVS")
+			log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching host %s updated/registered in last few minutes", hostPlatformData[i].Id)
+			continue
 		}
+
 		// here we are converting Http response in struct
-		var hvsResponseForHostId HostBasicInfo
+		var hostInfo HostBasicInfo
 		dec := json.NewDecoder(response.Body)
-		dec.DisallowUnknownFields()
-		err = dec.Decode(&hvsResponseForHostId)
+		err = dec.Decode(&hostInfo)
+		if err != nil {
+			log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error decoding host info response from HVS for host %s", hostPlatformData[i].Id)
+			continue
+		}
 
 		host := types.Host{
-			HostName: hvsResponseForHostId.HostName,
+			HostName: hostInfo.HostName,
 		}
-		// retrieve Data from database to check whether host is present in Database
-		if sahDB == nil {
-			log.Error("FetchHostRegisteredInLastFewMinutes: Error: sahDB", sahDB)
-		}
-
-		existingHost, retrivalError := sahDB.HostRepository().RetrieveAll(host)
-		if retrivalError != nil && len(existingHost) < 1 {
-			log.Error("FetchHostRegisteredInLastFewMinutes: Host does not Exist in database so we are going to create Host in database and got error while retrieving data from database: ", retrivalError)
-		}
+		existingHost, _ := sahDB.HostRepository().Retrieve(host)
 
 		// if host is not present in database then if will be executed and  new entry will created in Database
 		// else part will be executed if host is already present then we will update the database
-		if existingHost == nil || len(existingHost) < 1 {
+		if existingHost == nil {
 			host = types.Host{
 				Id:            hostPlatformData[i].Id,
-				HostName:      hvsResponseForHostId.HostName,
-				ConnectionURL: hvsResponseForHostId.ConnectionURL,
-				HardwareUUID:  hvsResponseForHostId.HardwareUUID,
+				HostName:      hostInfo.HostName,
+				ConnectionURL: hostInfo.ConnectionURL,
+				HardwareUUID:  hostInfo.HardwareUUID,
+				CreatedTime:   time.Now(),
+				UpdatedTime:   time.Now(),
 				SGXSupported:  hostPlatformData[i].SGXSupported,
 				SGXEnabled:    hostPlatformData[i].SGXEnabled,
 				FLCEnabled:    hostPlatformData[i].FLCEnabled,
@@ -180,32 +205,31 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 			}
 
 			_, err := sahDB.HostRepository().Create(host)
-
 			if err != nil {
-				log.WithError(err).Info("FetchHostRegisteredInLastFewMinutes: Failed to create Host")
-			} else {
-				log.Info("FetchHostRegisteredInLastFewMinutes: Successfully created Host in DB")
+				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error creating host record in DB for host %s", hostPlatformData[i].Id)
+				continue
 			}
+			log.Info("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Successfully created Host in DB")
 		} else {
-			numberOfHostsWithSameHostName := len(existingHost)
-			log.Debug("Number of host exists in DB: ", numberOfHostsWithSameHostName)
-			for j := 0; j < numberOfHostsWithSameHostName; j++ {
-				host = types.Host{
-					Id:            existingHost[j].Id,
-					HostName:      hvsResponseForHostId.HostName,
-					ConnectionURL: hvsResponseForHostId.ConnectionURL,
-					HardwareUUID:  existingHost[j].HardwareUUID,
-					SGXSupported:  hostPlatformData[i].SGXSupported,
-					SGXEnabled:    hostPlatformData[i].SGXEnabled,
-					FLCEnabled:    hostPlatformData[i].FLCEnabled,
-					EPCSize:       hostPlatformData[i].EPCSize,
-					TCBUpToDate:   hostPlatformData[i].TCBUpToDate,
-				}
-				updated_host := sahDB.HostRepository().Update(host)
-				if updated_host == nil {
-					log.Info("FetchHostRegisteredInLastFewMinutes: Updated database successfully")
-				}
+			host = types.Host{
+				Id:            existingHost.Id,
+				HostName:      hostInfo.HostName,
+				ConnectionURL: hostInfo.ConnectionURL,
+				HardwareUUID:  existingHost.HardwareUUID,
+				CreatedTime:   existingHost.CreatedTime,
+				UpdatedTime:   time.Now(),
+				SGXSupported:  hostPlatformData[i].SGXSupported,
+				SGXEnabled:    hostPlatformData[i].SGXEnabled,
+				FLCEnabled:    hostPlatformData[i].FLCEnabled,
+				EPCSize:       hostPlatformData[i].EPCSize,
+				TCBUpToDate:   hostPlatformData[i].TCBUpToDate,
 			}
+			err := sahDB.HostRepository().Update(host)
+			if err != nil {
+				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error updating host record in DB for host %s", hostPlatformData[i].Id)
+				continue
+			}
+			log.Info("resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Successfully updated Host in DB")
 		}
 	}
 	return nil

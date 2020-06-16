@@ -54,7 +54,7 @@ func SAHSchedulerJob(db repository.SAHDatabase) error {
 
 	err := attestationServicePollerJob.Execute(db)
 	if err != nil {
-		log.Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while running poller job")
+		log.WithError(err).Error("scheduler/sah_scheduler: SAHSchedulerJob() Error while running poller job")
 	}
 
 	err = resource.SynchAttestationInfo(db)

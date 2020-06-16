@@ -123,12 +123,13 @@ func WriteDataIn(fileName string, data string) error {
 
 	destination, err := os.Create(fileName)
 	if err != nil {
-		log.Debug("os.Create:", err)
-		return err
+		return errors.Wrap(err, "Error while creating file")
 	}
-	defer destination.Close()
 	// Below fmt.Fprintf is use to write the data into file.
 	fmt.Fprintf(destination, "%s", data)
+	if err = destination.Close(); err != nil {
+		return errors.Wrap(err, "Error while closing file")
+	}
 	return err
 }
 
