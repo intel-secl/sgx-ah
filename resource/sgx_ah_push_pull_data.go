@@ -56,7 +56,7 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&hvsResponse)
 	if err != nil {
-		return errors.Wrap(err,"resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error decoding host info response from HVS")
+		return errors.Wrap(err, "resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error decoding host info response from HVS")
 	}
 
 	numberOfHosts := len(hvsResponse)
@@ -104,7 +104,7 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 				TCBUpToDate:   platformDataResp[0].TCBUpToDate,
 			}
 			err = sahDB.HostRepository().Update(host)
-			if err != nil{
+			if err != nil {
 				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error updating host record of host %s in DB", hvsResponse[i].HostName)
 				continue
 			}
@@ -146,7 +146,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 	getSahUrl := conf.ShvsBaseUrl + "platform-data?numberOfMinutes=" + strconv.Itoa(hostRefreshTimeInMinutes)
 	resp, err := GetApi("GET", getSahUrl)
 	if err != nil {
-		return errors.Wrap(err,"resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching platform data of the hosts updated/registered in last few minutes")
+		return errors.Wrap(err, "resource/sgx_ah_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching platform data of the hosts updated/registered in last few minutes")
 	}
 
 	// here we are converting Http response in struct
@@ -183,7 +183,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 		}
 
 		host := types.Host{
-			HostName: hostInfo.HostName,
+			HardwareUUID: hostInfo.HardwareUUID,
 		}
 		existingHost, _ := sahDB.HostRepository().Retrieve(host)
 
