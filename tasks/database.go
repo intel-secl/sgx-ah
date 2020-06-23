@@ -8,9 +8,9 @@ import (
 	//"errors"
 	"flag"
 	"fmt"
-	"intel/isecl/sgx-attestation-hub/config"
-	"intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository/postgres"
+	"intel/isecl/shub/config"
+	"intel/isecl/shub/constants"
+	"intel/isecl/shub/repository/postgres"
 	cos "intel/isecl/lib/common/v2/os"
 	"intel/isecl/lib/common/v2/setup"
 	"intel/isecl/lib/common/v2/validation"
@@ -28,14 +28,14 @@ type Database struct {
 
 func (db Database) Run(c setup.Context) error {
 	fmt.Fprintln(db.ConsoleWriter, "Running database setup...")
-	envHost, _ := c.GetenvString("SAH_DB_HOSTNAME", "Database Hostname")
-	envPort, _ := c.GetenvInt("SAH_DB_PORT", "Database Port")
-	envUser, _ := c.GetenvString("SAH_DB_USERNAME", "Database Username")
-	envPass, _ := c.GetenvSecret("SAH_DB_PASSWORD", "Database Password")
-	envDB, _ := c.GetenvString("SAH_DB_NAME", "Database Name")
-	envDBSSLMode, _ := c.GetenvString("SAH_DB_SSLMODE", "Database SSLMode")
-	envDBSSLCert, _ := c.GetenvString("SAH_DB_SSLCERT", "Database SSL Certificate")
-	envDBSSLCertSrc, _ := c.GetenvString("SAH_DB_SSLCERTSRC", "Database SSL Cert file source file")
+	envHost, _ := c.GetenvString("SHUB_DB_HOSTNAME", "Database Hostname")
+	envPort, _ := c.GetenvInt("SHUB_DB_PORT", "Database Port")
+	envUser, _ := c.GetenvString("SHUB_DB_USERNAME", "Database Username")
+	envPass, _ := c.GetenvSecret("SHUB_DB_PASSWORD", "Database Password")
+	envDB, _ := c.GetenvString("SHUB_DB_NAME", "Database Name")
+	envDBSSLMode, _ := c.GetenvString("SHUB_DB_SSLMODE", "Database SSLMode")
+	envDBSSLCert, _ := c.GetenvString("SHUB_DB_SSLCERT", "Database SSL Certificate")
+	envDBSSLCertSrc, _ := c.GetenvString("SHUB_DB_SSLCERTSRC", "Database SSL Cert file source file")
 
 	fs := flag.NewFlagSet("database", flag.ContinueOnError)
 	fs.StringVar(&db.Config.Postgres.Hostname, "db-host", envHost, "Database Hostname")

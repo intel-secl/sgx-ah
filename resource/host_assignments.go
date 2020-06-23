@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/validation"
-	"intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/types"
+	"intel/isecl/shub/constants"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/types"
 	"net/http"
 	"time"
 )
@@ -34,7 +34,7 @@ type HostTenantMappingResponse struct {
 	Mapping []TenantHostMapping `json:"mappings"`
 }
 
-func SGXHostTenantMapping(r *mux.Router, db repository.SAHDatabase) {
+func SGXHostTenantMapping(r *mux.Router, db repository.SHUBDatabase) {
 
 	r.Handle("/host-assignments", handlers.ContentTypeHandler(createHostTenantMapping(db), "application/json")).Methods("POST")
 	r.Handle("/host-assignments/{id}", getHostTenantMapping(db)).Methods("GET")
@@ -58,7 +58,7 @@ func uniqueHostHardwareIDs(huuIds []string) []string {
 	return huuIdList
 }
 
-func createOrUpdateMapping(db repository.SAHDatabase, input HostTenantMappingRequest) ([]TenantHostMapping, error) {
+func createOrUpdateMapping(db repository.SHUBDatabase, input HostTenantMappingRequest) ([]TenantHostMapping, error) {
 
 	log.Trace("resource/host_assignments: createMapping() Entering")
 	defer log.Trace("resource/host_assignments: createMapping() Leaving")
@@ -132,7 +132,7 @@ func createOrUpdateMapping(db repository.SAHDatabase, input HostTenantMappingReq
 	return mappingResponse.Mapping, nil
 }
 
-func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
+func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/host_assignments: createHostTenantMapping() Entering")
@@ -199,7 +199,7 @@ func createHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func getHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
+func getHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		log.Trace("resource/host_assignments: getHostTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: getHostTenantMapping() Leaving")
@@ -241,7 +241,7 @@ func getHostTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func queryHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
+func queryHostTenantMappings(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/host_assignments: queryHostTenantMappings() Entering")
@@ -296,7 +296,7 @@ func queryHostTenantMappings(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func deleteTenantMapping(db repository.SAHDatabase) errorHandlerFunc {
+func deleteTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/host_assignments: deleteTenantMapping() Entering")

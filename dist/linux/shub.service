@@ -3,14 +3,14 @@ Description=SGX Attestation Hub
 
 [Service]
 Type=simple
-User=sah
-Group=sah
-ExecStart=/usr/bin/sgx-attestation-hub run
+User=shub
+Group=shub
+ExecStart=/usr/bin/shub run
 ExecReload=/bin/kill -s HUP $MAINPID
 TimeoutStartSec=0
 Restart=on-failure
 PermissionsStartOnly=true
-RuntimeDirectory=sgx-attestation-hub
+RuntimeDirectory=shub
 RuntimeDirectoryMode=0775
 
 [Install]

@@ -5,8 +5,8 @@
 package postgres
 
 import (
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/types"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/types"
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"

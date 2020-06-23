@@ -40,8 +40,8 @@ func ValidateXSSString(xssString string) error {
 }
 
 func ValidateInput(tenant Tenant) string {
-	log.Trace("resource/ahubvalidation: ValidateInput() Entering")
-	defer log.Trace("resource/ahubvalidation: ValidateInput() Leaving")
+	log.Trace("resource/shubvalidation: ValidateInput() Entering")
+	defer log.Trace("resource/shubvalidation: ValidateInput() Leaving")
 
 	errors := make([]string, 0)
 

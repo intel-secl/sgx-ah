@@ -1,4 +1,4 @@
-module intel/isecl/sgx-attestation-hub
+module intel/isecl/shub
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

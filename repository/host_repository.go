@@ -4,7 +4,7 @@
  */
 package repository
 
-import "intel/isecl/sgx-attestation-hub/types"
+import "intel/isecl/shub/types"
 
 type HostRepository interface {
 	Create(types.Host) (*types.Host, error)
@@ -12,5 +12,4 @@ type HostRepository interface {
 	RetrieveAll(types.Host) (types.Hosts, error)
 	Update(types.Host) error
 	Delete(types.Host) error
-	//RetrieveActiveHost(types.Host) (*types.Host, error)
 }

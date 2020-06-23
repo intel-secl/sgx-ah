@@ -6,8 +6,8 @@ package postgres
 
 import (
 	"fmt"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/types"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/types"
 	 commLog "intel/isecl/lib/common/v2/log"
 	"io/ioutil"
 	"strings"

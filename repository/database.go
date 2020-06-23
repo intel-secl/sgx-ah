@@ -4,7 +4,7 @@
  */
 package repository
 
-type SAHDatabase interface {
+type SHUBDatabase interface {
 	Migrate() error
 	HostRepository() HostRepository
 	TenantRepository() TenantRepository

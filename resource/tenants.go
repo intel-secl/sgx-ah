@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/validation"
-	consts "intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/types"
+	consts "intel/isecl/shub/constants"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/types"
 	"net/http"
 	"strings"
 	"time"
@@ -37,7 +37,7 @@ type Tenant struct {
 	Plugins         []*Plugin `json:"plugins"`
 }
 
-func SGXTenantRegister(r *mux.Router, db repository.SAHDatabase) {
+func SGXTenantRegister(r *mux.Router, db repository.SHUBDatabase) {
 
 	r.Handle("/tenants", handlers.ContentTypeHandler(registerTenant(db), "application/json")).Methods("POST")
 	r.Handle("/tenants/{id}", getTenant(db)).Methods("GET")
@@ -111,7 +111,7 @@ func removeCredentialFromTenant(tenant Tenant) {
 	}
 }
 
-func createTenantPluginCredential(db repository.SAHDatabase, tenantInput *types.Tenant, pluginCredentialsMap map[string][]PluginProperty) error {
+func createTenantPluginCredential(db repository.SHUBDatabase, tenantInput *types.Tenant, pluginCredentialsMap map[string][]PluginProperty) error {
 	log.Trace("resource/tenants:createTenantPluginCredential() Entering")
 	defer log.Trace("resource/tenants:createTenantPluginCredential() Leaving")
 
@@ -121,14 +121,14 @@ func createTenantPluginCredential(db repository.SAHDatabase, tenantInput *types.
 			return errors.Wrap(err, "resource/tenants:createTenantPluginCredential() failed to marshal tenant data to JSON")
 		}
 		pluginValueStr := string(pluginValueJSON)
-		AhTenantPluginCredential := types.TenantPluginCredential{
+		SHubTenantPluginCredential := types.TenantPluginCredential{
 			TenantUUID:  tenantInput.Id,
 			PluginName:  pluginName,
 			TenantName:  tenantInput.TenantName,
 			Credential:  pluginValueStr,
 			CreatedTime: time.Now(),
 		}
-		_, err = db.TenantPluginCredentialRepository().Create(AhTenantPluginCredential)
+		_, err = db.TenantPluginCredentialRepository().Create(SHubTenantPluginCredential)
 		if err != nil {
 			return errors.Wrap(err, "resource/tenants:createTenantPluginCredential() Error while caching Plugin Credentials")
 		}
@@ -136,7 +136,7 @@ func createTenantPluginCredential(db repository.SAHDatabase, tenantInput *types.
 	return nil
 }
 
-func deleteTenantPluginCredential(db repository.SAHDatabase, updatedTenant *types.Tenant) error {
+func deleteTenantPluginCredential(db repository.SHUBDatabase, updatedTenant *types.Tenant) error {
 	log.Trace("resource/tenants:deleteTenantPluginCredential() Entering")
 	defer log.Trace("resource/tenants:deleteTenantPluginCredential() Leaving")
 
@@ -153,7 +153,7 @@ func deleteTenantPluginCredential(db repository.SAHDatabase, updatedTenant *type
 	return nil
 }
 
-func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
+func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/tenants:registerTenant() Entering")
@@ -230,7 +230,7 @@ func registerTenant(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func getTenant(db repository.SAHDatabase) errorHandlerFunc {
+func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		log.Trace("resource/tenants: getTenant() Entering")
 		defer log.Trace("resource/tenants: getTenant() Leaving")
@@ -284,7 +284,7 @@ func getTenant(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func queryTenants(db repository.SAHDatabase) errorHandlerFunc {
+func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/tenants:queryTenants() Entering")
@@ -350,7 +350,7 @@ func queryTenants(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func updateTenant(db repository.SAHDatabase) errorHandlerFunc {
+func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/tenants:updateTenant() Entering")
@@ -452,7 +452,7 @@ func updateTenant(db repository.SAHDatabase) errorHandlerFunc {
 	}
 }
 
-func deleteTenant(db repository.SAHDatabase) errorHandlerFunc {
+func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 
 		log.Trace("resource/tenants: deleteTenant() Entering")

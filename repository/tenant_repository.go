@@ -4,7 +4,7 @@
  */
 package repository
 
-import "intel/isecl/sgx-attestation-hub/types"
+import "intel/isecl/shub/types"
 
 type TenantRepository interface {
 	Create(types.Tenant) (*types.Tenant, error)

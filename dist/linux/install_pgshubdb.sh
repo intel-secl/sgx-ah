@@ -23,7 +23,7 @@ DEFAULT_CERT_IP="127.0.0.1"
 
 ISECL_PGDB_IP_INTERFACES="${ISECL_PGDB_IP_INTERFACES:-localhost}"    # network interfaces to listen for connection
 ISECL_PGDB_PORT="${ISECL_PGDB_PORT:-5432}"
-ISECL_PGDB_DBNAME="${ISECL_PGDB_DBNAME:-pgsahdb}"                # database name
+ISECL_PGDB_DBNAME="${ISECL_PGDB_DBNAME:-pgshubdb}"                # database name
 ISECL_PGDB_USERNAME="${ISECL_PGDB_USERNAME:-dbuser}"          # name of user used to connect to database
 ISECL_PGDB_USERPASSWORD="${1:-$ISECL_PGDB_USERPASSWORD}"      # password for database user
 
@@ -57,7 +57,7 @@ echo "Installing postgres database version 11 and its rpm repo for RHEL 7 x86_64
 cd /tmp
 log_file=/dev/null
 if [ -z $SAVE_DB_INSTALL_LOG ] ; then
-	log_file=~/isecl_pgsahdb_install.log
+	log_file=~/isecl_pgshubdb_install.log
 fi
 
 # download postgres repo

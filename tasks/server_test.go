@@ -6,7 +6,7 @@ package tasks
 
 import (
 	"intel/isecl/lib/common/v2/setup"
-	"intel/isecl/sgx-attestation-hub/config"
+	"intel/isecl/shub/config"
 	"os"
 
 	"testing"
@@ -28,7 +28,7 @@ func TestServerSetup(t *testing.T) {
 }
 
 func TestServerSetupEnv(t *testing.T) {
-	os.Setenv("SAH_PORT", "1337")
+	os.Setenv("SHUB_PORT", "1337")
 	c := config.Configuration{}
 	s := Server{
 		Flags:         nil,

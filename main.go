@@ -5,10 +5,10 @@
 package main
 
 import (
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/constants"
 	"os"
-        "os/user"
-        "strconv"
+	"os/user"
+	"strconv"
 )
 
 func openLogFiles() (logFile *os.File, httpLogFile *os.File, secLogFile *os.File, err error) {
@@ -30,21 +30,21 @@ func openLogFiles() (logFile *os.File, httpLogFile *os.File, secLogFile *os.File
         }
         os.Chmod(constants.SecurityLogFile, 0664)
 
-        sahUser, err := user.Lookup(constants.SAHUserName)
+        shubUser, err := user.Lookup(constants.SHUBUserName)
         if err != nil {
-                log.Errorf("Could not find user '%s'", constants.SAHUserName)
+                log.Errorf("Could not find user '%s'", constants.SHUBUserName)
                 return nil, nil, nil, err
         }
 
-        uid, err := strconv.Atoi(sahUser.Uid)
+        uid, err := strconv.Atoi(shubUser.Uid)
         if err != nil {
-                log.Errorf("Could not parse sah user uid '%s'", sahUser.Uid)
+                log.Errorf("Could not parse shub user uid '%s'", shubUser.Uid)
                 return nil, nil, nil, err
         }
 
-        gid, err := strconv.Atoi(sahUser.Gid)
+        gid, err := strconv.Atoi(shubUser.Gid)
         if err != nil {
-                log.Errorf("Could not parse sah user gid '%s'", sahUser.Gid)
+                log.Errorf("Could not parse shub user gid '%s'", shubUser.Gid)
                 return nil, nil, nil, err
         }
 

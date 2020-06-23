@@ -11,8 +11,8 @@ import (
 	"net/http/httptest"
 	"github.com/stretchr/testify/assert"
 	"intel/isecl/lib/common/v2/middleware"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/constants"
 )
 
 
@@ -42,7 +42,7 @@ func setupRouter(t *testing.T) *mux.Router {
 
         r := mux.NewRouter()
         sr := r.PathPrefix("/scs/sgx/certification/v1/").Subrouter()
-        func(setters ...func(*mux.Router, repository.SAHDatabase)) {
+        func(setters ...func(*mux.Router, repository.SHUBDatabase)) {
                 for _, s := range setters {
                         s(sr, nil)
                 }
@@ -50,14 +50,14 @@ func setupRouter(t *testing.T) *mux.Router {
 
         sr = r.PathPrefix("/scs/sgx/test/platforminfo/").Subrouter()
         sr.Use(middleware.NewTokenAuth("test_resources", "test_resources", mockRetrieveJWTSigningCerts, time.Minute*constants.DefaultJwtValidateCacheKeyMins))
-        func(setters ...func(*mux.Router, repository.SAHDatabase)) {
+        func(setters ...func(*mux.Router, repository.SHUBDatabase)) {
                 for _, s := range setters {
                         s(sr, nil)
                 }
         }(PlatformInfoOps)
 
         sr = r.PathPrefix("/scs/sgx/test-noauth/platforminfo/").Subrouter()
-        func(setters ...func(*mux.Router, repository.SAHDatabase)) {
+        func(setters ...func(*mux.Router, repository.SHUBDatabase)) {
                 for _, s := range setters {
                         s(sr, nil)
                 }

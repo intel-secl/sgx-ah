@@ -6,7 +6,7 @@ package tasks
 
 import (
 	"intel/isecl/lib/common/v2/setup"
-	"intel/isecl/sgx-attestation-hub/config"
+	"intel/isecl/shub/config"
 	"os"
 	"testing"
 
@@ -33,11 +33,11 @@ func TestDatabaseSetup(t *testing.T) {
 
 func TestDatabaseSetupEnv(t *testing.T) {
 	assert := assert.New(t)
-	os.Setenv("SAH_DB_HOSTNAME", "hostname")
-	os.Setenv("SAH_DB_PORT", "5432")
-	os.Setenv("SAH_DB_USERNAME", "user")
-	os.Setenv("SAH_DB_PASSWORD", "password")
-	os.Setenv("SAH_DB_NAME", "scs_db")
+	os.Setenv("SHUB_DB_HOSTNAME", "hostname")
+	os.Setenv("SHUB_DB_PORT", "5432")
+	os.Setenv("SHUB_DB_USERNAME", "user")
+	os.Setenv("SHUB_DB_PASSWORD", "password")
+	os.Setenv("SHUB_DB_NAME", "scs_db")
 	c := config.Configuration{}
 	s := Database{
 		Flags:         nil,

@@ -4,7 +4,7 @@
  */
 package repository
 
-import "intel/isecl/sgx-attestation-hub/types"
+import "intel/isecl/shub/types"
 
 type TenantPluginCredentialRepository interface {
 	Create(types.TenantPluginCredential) (*types.TenantPluginCredential, error)

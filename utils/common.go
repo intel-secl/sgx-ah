@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	clog "intel/isecl/lib/common/v2/log"
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/constants"
 	"io/ioutil"
 	"net/http"
 	"net/url"

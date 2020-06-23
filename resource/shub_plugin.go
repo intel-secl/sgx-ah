@@ -8,12 +8,12 @@ package resource
 import (
 	"encoding/json"
 	"github.com/pkg/errors"
-	"intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/resource/plugins"
-	"intel/isecl/sgx-attestation-hub/types"
 	"strconv"
 	"time"
+	"intel/isecl/shub/constants"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/resource/plugins"
+	"intel/isecl/shub/types"
 
 	"crypto"
 	"crypto/rand"
@@ -70,11 +70,11 @@ func GetCredentials(configuartion string, prop *[]types.Property) error {
 	return err
 }
 
-func GetAHPublicKey() []byte {
+func GetSHUBPublicKey() []byte {
 	rsaPublicKeyLocation := constants.PublickeyLocation
 	pubKey, err := ioutil.ReadFile(rsaPublicKeyLocation)
 	if err != nil {
-		log.WithError(err).Info("Error in reading the hub pem file")
+		log.WithError(err).Info("Error in reading the shub pem file")
 	}
 	return pubKey
 }
@@ -134,7 +134,7 @@ func createSignedTrustReport(createSignedTrustReport string) (string, error) {
 	return signatureString, nil
 }
 
-func SynchAttestationInfo(db repository.SAHDatabase) error {
+func SynchAttestationInfo(db repository.SHUBDatabase) error {
 	log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Entering")
 	defer log.Trace("resource/synchAttestationInfo: synchAttestationInfo() Leaving")
 
@@ -195,7 +195,7 @@ func SynchAttestationInfo(db repository.SAHDatabase) error {
 	return nil
 }
 
-func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Plugin, db repository.SAHDatabase) error {
+func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Plugin, db repository.SHUBDatabase) error {
 	log.Trace("resource/processDataToPlugins: processDataToPlugins() Entering")
 	defer log.Trace("resource/processDataToPlugins: processDataToPlugins() Leaving")
 	for _, plugin := range p1 {
@@ -244,7 +244,7 @@ func processDataToPlugins(t1 types.Tenant, h1 []types.HostDetails, p1 []types.Pl
 	return nil
 }
 
-func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SAHDatabase) error {
+func addCredentialToPlugin(t1 types.Tenant, p1 *types.Plugin, db repository.SHUBDatabase) error {
 	credential := types.TenantPluginCredential{
 		TenantUUID: t1.Id,
 		PluginName: p1.Name,
@@ -286,7 +286,7 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 	hostPlatformData.Epc_size = h1.EPCSize
 	hostPlatformData.Epc_size = strings.Replace(hostPlatformData.Epc_size, " ", "", -1) ///This is so because in K8S CRD can't have spaces
 
-	twiceSchedulerTime := strconv.Itoa(constants.DefaultSAHSchedulerTimer * 2)
+	twiceSchedulerTime := strconv.Itoa(constants.DefaultSHUBSchedulerTimer * 2)
 	parsedDuration, _ := time.ParseDuration(twiceSchedulerTime + "s")
 	updatedTime := time.Now().UTC().Add(parsedDuration)
 	formattedTime := updatedTime.Format(time.RFC3339)

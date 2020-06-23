@@ -2,12 +2,12 @@
 
 # READ .env file 
 echo PWD IS $(pwd)
-if [ -f ~/sgx-attestation-hub.env ]; then 
-    echo Reading Installation options from `realpath ~/sgx-attestation-hub.env`
-    env_file=~/sgx-attestation-hub.env
-elif [ -f ../sgx-attestation-hub.env ]; then
-    echo Reading Installation options from `realpath ../sgx-attestation-hub.env`
-    env_file=../sgx-attestation-hub.env
+if [ -f ~/shub.env ]; then
+    echo Reading Installation options from `realpath ~/shub.env`
+    env_file=~/shub.env
+elif [ -f ../shub.env ]; then
+    echo Reading Installation options from `realpath ../shub.env`
+    env_file=../shub.env
 fi
 
 if [ -n $env_file ]; then
@@ -16,10 +16,10 @@ if [ -n $env_file ]; then
     if [ -n "$env_file_exports" ]; then eval export $env_file_exports; fi
 else
     echo No .env file found
-    SAH_NOSETUP="true"
+    SHUB_NOSETUP="true"
 fi
 
-SERVICE_USERNAME=sah
+SERVICE_USERNAME=shub
 
 if [[ $EUID -ne 0 ]]; then 
     echo "This installer must be run as root"
@@ -32,7 +32,7 @@ id -u $SERVICE_USERNAME 2> /dev/null || useradd $SERVICE_USERNAME
 echo "Installing SGX Attestation Hub Service..."
 
 
-COMPONENT_NAME=sgx-attestation-hub
+COMPONENT_NAME=shub
 PRODUCT_HOME=/opt/$COMPONENT_NAME
 BIN_PATH=$PRODUCT_HOME/bin
 DB_SCRIPT_PATH=$PRODUCT_HOME/dbscripts
@@ -65,16 +65,16 @@ ln -sfT $BIN_PATH/$COMPONENT_NAME /usr/bin/$COMPONENT_NAME
 cp db_rotation.sql $DB_SCRIPT_PATH/ && chown $SERVICE_USERNAME:$SERVICE_USERNAME $DB_SCRIPT_PATH/*
 
 # Create logging dir in /var/log
-mkdir -p $LOG_PATH && chown sgx-attestation-hub:sgx-attestation-hub $LOG_PATH
+mkdir -p $LOG_PATH && chown shub:shub $LOG_PATH
 chmod 761 $LOG_PATH
 chmod g+s $LOG_PATH
 
 # Install systemd script
-cp sgx-attestation-hub.service $PRODUCT_HOME && chown $SERVICE_USERNAME:$SERVICE_USERNAME $PRODUCT_HOME/sgx-attestation-hub.service && chown $SERVICE_USERNAME:$SERVICE_USERNAME $PRODUCT_HOME
+cp shub.service $PRODUCT_HOME && chown $SERVICE_USERNAME:$SERVICE_USERNAME $PRODUCT_HOME/shub.service && chown $SERVICE_USERNAME:$SERVICE_USERNAME $PRODUCT_HOME
 
 # Enable systemd service
-systemctl disable sgx-attestation-hub.service > /dev/null 2>&1
-systemctl enable $PRODUCT_HOME/sgx-attestation-hub.service
+systemctl disable shub.service > /dev/null 2>&1
+systemctl enable $PRODUCT_HOME/shub.service
 systemctl daemon-reload
 
 #Install log rotation
@@ -125,8 +125,8 @@ export LOG_OLD=${LOG_OLD:-12}
 
 mkdir -p /etc/logrotate.d
 
-if [ ! -a /etc/logrotate.d/sgx-attestation-hub ]; then
- echo "/var/log/sgx-attestation-hub/* {
+if [ ! -a /etc/logrotate.d/shub ]; then
+ echo "/var/log/shub/* {
     missingok
         notifempty
         rotate $LOG_OLD
@@ -136,13 +136,13 @@ if [ ! -a /etc/logrotate.d/sgx-attestation-hub ]; then
         $LOG_COMPRESS
         $LOG_DELAYCOMPRESS
         $LOG_COPYTRUNCATE
-}" > /etc/logrotate.d/sgx-attestation-hub
+}" > /etc/logrotate.d/shub
 fi
 
 
-# check if SAH_NOSETUP is defined
-if [ "${SAH_NOSETUP,,}" == "true" ]; then
-    echo "SAH_NOSETUP is true, skipping setup"
+# check if SHUB_NOSETUP is defined
+if [ "${SHUB_NOSETUP,,}" == "true" ]; then
+    echo "SHUB_NOSETUP is true, skipping setup"
     echo "Installation completed successfully!"
 else 
     $COMPONENT_NAME setup all

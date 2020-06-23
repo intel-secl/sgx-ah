@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"intel/isecl/lib/clients/v2"
 	"intel/isecl/lib/clients/v2/aas"
-	"intel/isecl/sgx-attestation-hub/config"
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/config"
+	"intel/isecl/shub/constants"
 	"io"
 	"net/http"
 	"os"
@@ -50,7 +50,7 @@ func addJWTToken(req *http.Request) error {
 		}
 	}
 	aasRWLock.RLock()
-	jwtToken, err := aasClient.GetUserToken(c.SAH.User)
+	jwtToken, err := aasClient.GetUserToken(c.SHUB.User)
 	aasRWLock.RUnlock()
 	// something wrong
 	if err != nil {
@@ -58,12 +58,12 @@ func addJWTToken(req *http.Request) error {
 		aasRWLock.Lock()
 		defer aasRWLock.Unlock()
 		// check if other thread fix it already
-		jwtToken, err = aasClient.GetUserToken(c.SAH.User)
+		jwtToken, err = aasClient.GetUserToken(c.SHUB.User)
 		// it is not fixed
 		if err != nil {
-			aasClient.AddUser(c.SAH.User, c.SAH.Password)
+			aasClient.AddUser(c.SHUB.User, c.SHUB.Password)
 			err = aasClient.FetchAllTokens()
-			jwtToken, err = aasClient.GetUserToken(c.SAH.User)
+			jwtToken, err = aasClient.GetUserToken(c.SHUB.User)
 			if err != nil {
 				return errors.Wrap(err, "resource/utils:addJWTToken() Could not fetch token")
 			}

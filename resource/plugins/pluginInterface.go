@@ -6,7 +6,7 @@
 package plugins
 
 import (
-	"intel/isecl/sgx-attestation-hub/types"
+	"intel/isecl/shub/types"
 )
 
 type PluginType interface {

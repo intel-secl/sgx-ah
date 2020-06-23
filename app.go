@@ -12,7 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"intel/isecl/lib/common/v2/middleware"
-	"intel/isecl/sgx-attestation-hub/resource/scheduler"
+	"intel/isecl/shub/resource/scheduler"
 	"io"
 	"io/ioutil"
 	stdlog "log"
@@ -37,13 +37,13 @@ import (
 	cos "intel/isecl/lib/common/v2/os"
 	"intel/isecl/lib/common/v2/setup"
 	"intel/isecl/lib/common/v2/validation"
-	"intel/isecl/sgx-attestation-hub/config"
-	"intel/isecl/sgx-attestation-hub/constants"
-	"intel/isecl/sgx-attestation-hub/repository"
-	"intel/isecl/sgx-attestation-hub/repository/postgres"
-	"intel/isecl/sgx-attestation-hub/resource"
-	"intel/isecl/sgx-attestation-hub/tasks"
-	"intel/isecl/sgx-attestation-hub/version"
+	"intel/isecl/shub/config"
+	"intel/isecl/shub/constants"
+	"intel/isecl/shub/repository"
+	"intel/isecl/shub/repository/postgres"
+	"intel/isecl/shub/resource"
+	"intel/isecl/shub/tasks"
+	"intel/isecl/shub/version"
 
 	// Import driver for GORM
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -67,17 +67,17 @@ func (a *App) printUsage() {
 	w := a.consoleWriter()
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "    sgx-attestation-hub <command> [arguments]")
+	fmt.Fprintln(w, "    shub <command> [arguments]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Avaliable Commands:")
 	fmt.Fprintln(w, "    help|-h|-help    Show this help message")
 	fmt.Fprintln(w, "    setup [task]     Run setup task")
-	fmt.Fprintln(w, "    start            Start sgx-attestation-hub")
-	fmt.Fprintln(w, "    status           Show the status of sgx-attestation-hub")
-	fmt.Fprintln(w, "    stop             Stop sgx-attestation-hub")
+	fmt.Fprintln(w, "    start            Start SGX Attestation Hub")
+	fmt.Fprintln(w, "    status           Show the status of SGX Attestation Hub")
+	fmt.Fprintln(w, "    stop             Stop SGX Attestation Hub")
 	fmt.Fprintln(w, "    tlscertsha384    Show the SHA384 of the certificate used for TLS")
-	fmt.Fprintln(w, "    uninstall        Uninstall sgx-attestation-hub")
-	fmt.Fprintln(w, "    version          Show the version of sgx-attestation-hub")
+	fmt.Fprintln(w, "    uninstall        Uninstall SGX Attestation Hub")
+	fmt.Fprintln(w, "    version          Show the version of SGX Attestation Hub")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Avaliable Tasks for setup:")
 	fmt.Fprintln(w, "    all                       Runs all setup tasks")
@@ -86,35 +86,35 @@ func (a *App) printUsage() {
 	fmt.Fprintln(w, "                              Optional env variables:")
 	fmt.Fprintln(w, "                                  - get optional env variables from all the setup tasks")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "    sgx-attestation-hub setup database [-force] [--arguments=<argument_value>]")
+	fmt.Fprintln(w, "    shub setup database [-force] [--arguments=<argument_value>]")
 	fmt.Fprintln(w, "        - Avaliable arguments are:")
-	fmt.Fprintln(w, "            - db-host    alternatively, set environment variable SAH_DB_HOSTNAME")
-	fmt.Fprintln(w, "            - db-port    alternatively, set environment variable SAH_DB_PORT")
-	fmt.Fprintln(w, "            - db-user    alternatively, set environment variable SAH_DB_USERNAME")
-	fmt.Fprintln(w, "            - db-pass    alternatively, set environment variable SAH_DB_PASSWORD")
-	fmt.Fprintln(w, "            - db-name    alternatively, set environment variable SAH_DB_NAME")
+	fmt.Fprintln(w, "            - db-host    alternatively, set environment variable SHUB_DB_HOSTNAME")
+	fmt.Fprintln(w, "            - db-port    alternatively, set environment variable SHUB_DB_PORT")
+	fmt.Fprintln(w, "            - db-user    alternatively, set environment variable SHUB_DB_USERNAME")
+	fmt.Fprintln(w, "            - db-pass    alternatively, set environment variable SHUB_DB_PASSWORD")
+	fmt.Fprintln(w, "            - db-name    alternatively, set environment variable SHUB_DB_NAME")
 	fmt.Fprintln(w, "            - db-sslmode <disable|allow|prefer|require|verify-ca|verify-full>")
-	fmt.Fprintln(w, "                         alternatively, set environment variable SAH_DB_SSLMODE")
+	fmt.Fprintln(w, "                         alternatively, set environment variable SHUB_DB_SSLMODE")
 	fmt.Fprintln(w, "            - db-sslcert path to where the certificate file of database. Only applicable")
 	fmt.Fprintln(w, "                         for db-sslmode=<verify-ca|verify-full. If left empty, the cert")
-	fmt.Fprintln(w, "                         will be copied to /etc/sgx-attestation-hub/tdcertdb.pem")
-	fmt.Fprintln(w, "                         alternatively, set environment variable SAH_DB_SSLCERT")
+	fmt.Fprintln(w, "                         will be copied to /etc/shub/shub-dbcert.pem")
+	fmt.Fprintln(w, "                         alternatively, set environment variable SHUB_DB_SSLCERT")
 	fmt.Fprintln(w, "            - db-sslcertsrc <path to where the database ssl/tls certificate file>")
 	fmt.Fprintln(w, "                         mandatory if db-sslcert does not already exist")
-	fmt.Fprintln(w, "                         alternatively, set environment variable SAH_DB_SSLCERTSRC")
-	fmt.Fprintln(w, "        - Run this command with environment variable SAH_DB_REPORT_MAX_ROWS and")
-	fmt.Fprintln(w, "          SAH_DB_REPORT_NUM_ROTATIONS can update db rotation arguments")
+	fmt.Fprintln(w, "                         alternatively, set environment variable SHUB_DB_SSLCERTSRC")
+	fmt.Fprintln(w, "        - Run this command with environment variable SHUB_DB_REPORT_MAX_ROWS and")
+	fmt.Fprintln(w, "          SHUB_DB_REPORT_NUM_ROTATIONS can update db rotation arguments")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "    download_ca_cert      Download CMS root CA certificate")
 	fmt.Fprintln(w, "                          - Option [--force] overwrites any existing files, and always downloads new root CA cert")
 	fmt.Fprintln(w, "                          Required env variables specific to setup task are:")
 	fmt.Fprintln(w, "                              - CMS_BASE_URL=<url>                                : for CMS API url")
-	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>    : to ensure that SAH is talking to the right CMS instance")
+	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>    : to ensure that SHUB is talking to the right CMS instance")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "    download_cert TLS     Generates Key pair and CSR, gets it signed from CMS")
 	fmt.Fprintln(w, "                          - Option [--force] overwrites any existing files, and always downloads newly signed TLS cert")
-	fmt.Fprintln(w, "                          Required env variable if SAH_NOSETUP=true or variable not set in config.yml:")
-	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>      : to ensure that SAH is talking to the right CMS instance")
+	fmt.Fprintln(w, "                          Required env variable if SHUB_NOSETUP=true or variable not set in config.yml:")
+	fmt.Fprintln(w, "                              - CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash>      : to ensure that SHUB is talking to the right CMS instance")
 	fmt.Fprintln(w, "                          Required env variables specific to setup task are:")
 	fmt.Fprintln(w, "                              - CMS_BASE_URL=<url>               : for CMS API url")
 	fmt.Fprintln(w, "                              - BEARER_TOKEN=<token>             : for authenticating with CMS")
@@ -123,9 +123,9 @@ func (a *App) printUsage() {
 	fmt.Fprintln(w, "                              - KEY_PATH=<key_path>              : Path of file where TLS key needs to be stored")
 	fmt.Fprintln(w, "                              - CERT_PATH=<cert_path>            : Path of file/directory where TLS certificate needs to be stored")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "    sgx-attestation-hub setup server [--port=<port>]")
+	fmt.Fprintln(w, "    shub setup server [--port=<port>]")
 	fmt.Fprintln(w, "        - Setup http server on <port>")
-	fmt.Fprintln(w, "        - Environment variable SAH_PORT=<port> can be set alternatively")
+	fmt.Fprintln(w, "        - Environment variable SHUB_PORT=<port> can be set alternatively")
 	fmt.Fprintln(w, "")
 }
 
@@ -264,7 +264,7 @@ func (a *App) Run(args []string) error {
 			fmt.Fprintln(os.Stderr, "Error: daemon did not start - ", err.Error())
 			// wait some time for logs to flush - otherwise, there will be no entry in syslog
 			time.Sleep(10 * time.Millisecond)
-			return errors.Wrap(err, "app:Run() Error starting sgx-attestation-hub service")
+			return errors.Wrap(err, "app:Run() Error starting SGX Attestation Hub service")
 		}
 	case "-h", "--help":
 		a.printUsage()
@@ -378,22 +378,22 @@ func (a *App) Run(args []string) error {
 			return errors.Wrap(err, "app:Run() Error running setup")
 		}
 
-		sahUser, err := user.Lookup(constants.SAHUserName)
+		shubUser, err := user.Lookup(constants.SHUBUserName)
 		if err != nil {
-			return errors.Wrapf(err, "Could not find user '%s'", constants.SAHUserName)
+			return errors.Wrapf(err, "Could not find user '%s'", constants.SHUBUserName)
 		}
 
-		uid, err := strconv.Atoi(sahUser.Uid)
+		uid, err := strconv.Atoi(shubUser.Uid)
 		if err != nil {
-			return errors.Wrapf(err, "Could not parse sah user uid '%s'", sahUser.Uid)
+			return errors.Wrapf(err, "Could not parse shub user uid '%s'", shubUser.Uid)
 		}
 
-		gid, err := strconv.Atoi(sahUser.Gid)
+		gid, err := strconv.Atoi(shubUser.Gid)
 		if err != nil {
-			return errors.Wrapf(err, "Could not parse sah user gid '%s'", sahUser.Gid)
+			return errors.Wrapf(err, "Could not parse shub user gid '%s'", shubUser.Gid)
 		}
 
-		//Change the file ownership to sah user
+		//Change the file ownership to shub user
 
 		err = cos.ChownR(constants.ConfigDir, uid, gid)
 		if err != nil {
@@ -419,7 +419,7 @@ func (a *App) startServer() error {
 	defer log.Trace("app:startServer() Leaving")
 
 	c := a.configuration()
-	log.Info("Starting SAH server")
+	log.Info("Starting SHUB server")
 
 	// verify the database connection. If this does not succeed then we want to exit right here
 	// the Open method has a retry operation that takes a long time
@@ -429,24 +429,24 @@ func (a *App) startServer() error {
 	}
 
 	// Open database
-	sahDB, err := postgres.Open(c.Postgres.Hostname, c.Postgres.Port, c.Postgres.DBName,
+	shubDB, err := postgres.Open(c.Postgres.Hostname, c.Postgres.Port, c.Postgres.DBName,
 		c.Postgres.Username, c.Postgres.Password, c.Postgres.SSLMode, c.Postgres.SSLCert)
 	if err != nil {
 		log.WithError(err).Error("failed to open Postgres database")
 		return err
 	}
-	defer sahDB.Close()
+	defer shubDB.Close()
 	log.Info("Migrating Database")
-	sahDB.Migrate()
+	shubDB.Migrate()
 
 	r := mux.NewRouter()
 	r.SkipClean(true)
 
 	sr := r.PathPrefix("/sgx-ah/v1/").Subrouter()
 	sr.Use(middleware.NewTokenAuth(constants.TrustedJWTSigningCertsDir, constants.TrustedCAsStoreDir, fnGetJwtCerts, time.Minute*constants.DefaultJwtValidateCacheKeyMins))
-	func(setters ...func(*mux.Router, repository.SAHDatabase)) {
+	func(setters ...func(*mux.Router, repository.SHUBDatabase)) {
 		for _, setter := range setters {
-			setter(sr, sahDB)
+			setter(sr, shubDB)
 		}
 	}(resource.SGXTenantRegister, resource.SGXHostTenantMapping)
 
@@ -457,8 +457,7 @@ func (a *App) startServer() error {
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 	}
-	scheduler.StartSAHSchedular(sahDB, c.SchedulerTimer)
-	//resource.SynchAttestationInfo(sahDB)
+	scheduler.StartSHUBSchedular(shubDB, c.SchedulerTimer)
 
 	// Setup signal handlers to gracefully handle termination
 	stop := make(chan os.Signal)
@@ -503,36 +502,36 @@ func (a *App) start() error {
 	log.Trace("app:start() Entering")
 	defer log.Trace("app:start() Leaving")
 
-	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl start sgx-attestation-hub"`)
+	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl start shub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
 		return err
 	}
-	return syscall.Exec(systemctl, []string{"systemctl", "start", "sgx-attestation-hub"}, os.Environ())
+	return syscall.Exec(systemctl, []string{"systemctl", "start", "shub"}, os.Environ())
 }
 
 func (a *App) stop() error {
 	log.Trace("app:stop() Entering")
 	defer log.Trace("app:stop() Leaving")
 
-	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl stop sgx-attestation-hub"`)
+	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl stop shub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
 		return err
 	}
-	return syscall.Exec(systemctl, []string{"systemctl", "stop", "sgx-attestation-hub"}, os.Environ())
+	return syscall.Exec(systemctl, []string{"systemctl", "stop", "shub"}, os.Environ())
 }
 
 func (a *App) status() error {
 	log.Trace("app:status() Entering")
 	defer log.Trace("app:status() Leaving")
 
-	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl status sgx-attestation-hub"`)
+	fmt.Fprintln(a.consoleWriter(), `Forwarding to "systemctl status shub"`)
 	systemctl, err := exec.LookPath("systemctl")
 	if err != nil {
 		return err
 	}
-	return syscall.Exec(systemctl, []string{"systemctl", "status", "sgx-attestation-hub"}, os.Environ())
+	return syscall.Exec(systemctl, []string{"systemctl", "status", "shub"}, os.Environ())
 }
 
 func (a *App) uninstall(purge bool) {
@@ -629,14 +628,14 @@ func validateSetupArgs(cmd string, args []string) error {
 
 	case "database":
 		env_names_cmd_opts := map[string]string{
-			"SAH_DB_HOSTNAME":   "db-host",
-			"SAH_DB_PORT":       "db-port",
-			"SAH_DB_USERNAME":   "db-user",
-			"SAH_DB_PASSWORD":   "db-pass",
-			"SAH_DB_NAME":       "db-name",
-			"SAH_DB_SSLMODE":    "db-sslmode",
-			"SAH_DB_SSLCERT":    "db-sslcert",
-			"SAH_DB_SSLCERTSRC": "db-sslcertsrc",
+			"SHUB_DB_HOSTNAME":   "db-host",
+			"SHUB_DB_PORT":       "db-port",
+			"SHUB_DB_USERNAME":   "db-user",
+			"SHUB_DB_PASSWORD":   "db-pass",
+			"SHUB_DB_NAME":       "db-name",
+			"SHUB_DB_SSLMODE":    "db-sslmode",
+			"SHUB_DB_SSLCERT":    "db-sslcert",
+			"SHUB_DB_SSLCERTSRC": "db-sslcertsrc",
 		}
 
 		fs = flag.NewFlagSet("database", flag.ContinueOnError)
@@ -662,7 +661,7 @@ func validateSetupArgs(cmd string, args []string) error {
 	case "tls":
 
 		env_names_cmd_opts := map[string]string{
-			"SAH_TLS_HOST_NAMES": "host_names",
+			"SHUB_TLS_HOST_NAMES": "host_names",
 		}
 
 		fs = flag.NewFlagSet("tls", flag.ContinueOnError)
@@ -700,7 +699,7 @@ func (a *App) PrintDirFileContents(dir string) error {
 	return nil
 }
 
-func (a *App) DatabaseFactory() (repository.SAHDatabase, error) {
+func (a *App) DatabaseFactory() (repository.SHUBDatabase, error) {
 	log.Trace("app:DatabaseFactory() Entering")
 	defer log.Trace("app:DatabaseFactory() Leaving")
 

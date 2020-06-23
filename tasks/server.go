@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	commLog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/lib/common/v2/setup"
-	"intel/isecl/sgx-attestation-hub/config"
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/config"
+	"intel/isecl/shub/constants"
 	"io"
 	"time"
 )
@@ -30,7 +30,7 @@ func (s Server) Run(c setup.Context) error {
 	defer log.Trace("tasks/server:Run() Leaving")
 
 	fmt.Fprintln(s.ConsoleWriter, "Running server setup...")
-	defaultPort, err := c.GetenvInt("SAH_PORT", "SGX Attestation Hub Service http port")
+	defaultPort, err := c.GetenvInt("SHUB_PORT", "SGX Attestation Hub Service http port")
 	if err != nil {
 		defaultPort = constants.DefaultHttpPort
 	}
@@ -50,42 +50,42 @@ func (s Server) Run(c setup.Context) error {
 	s.Config.AuthDefender.IntervalMins = constants.DefaultAuthDefendIntervalMins
 	s.Config.AuthDefender.LockoutDurationMins = constants.DefaultAuthDefendLockoutMins
 
-	readTimeout, err := c.GetenvInt("SAH_SERVER_READ_TIMEOUT", "SGX Attestation Hub Service Read Timeout")
+	readTimeout, err := c.GetenvInt("SHUB_SERVER_READ_TIMEOUT", "SGX Attestation Hub Service Read Timeout")
 	if err != nil {
 		s.Config.ReadTimeout = constants.DefaultReadTimeout
 	} else {
 		s.Config.ReadTimeout = time.Duration(readTimeout) * time.Second
 	}
 
-	readHeaderTimeout, err := c.GetenvInt("SAH_SERVER_READ_HEADER_TIMEOUT", "SGX Attestation Hub Service Read Header Timeout")
+	readHeaderTimeout, err := c.GetenvInt("SHUB_SERVER_READ_HEADER_TIMEOUT", "SGX Attestation Hub Service Read Header Timeout")
 	if err != nil {
 		s.Config.ReadHeaderTimeout = constants.DefaultReadHeaderTimeout
 	} else {
 		s.Config.ReadHeaderTimeout = time.Duration(readHeaderTimeout) * time.Second
 	}
 
-	writeTimeout, err := c.GetenvInt("SAH_SERVER_WRITE_TIMEOUT", "SGX Attestation Hub Service Write Timeout")
+	writeTimeout, err := c.GetenvInt("SHUB_SERVER_WRITE_TIMEOUT", "SGX Attestation Hub Service Write Timeout")
 	if err != nil {
 		s.Config.WriteTimeout = constants.DefaultWriteTimeout
 	} else {
 		s.Config.WriteTimeout = time.Duration(writeTimeout) * time.Second
 	}
 
-	idleTimeout, err := c.GetenvInt("SAH_SERVER_IDLE_TIMEOUT", "SGX Attestation Hub Service Service Idle Timeout")
+	idleTimeout, err := c.GetenvInt("SHUB_SERVER_IDLE_TIMEOUT", "SGX Attestation Hub Service Service Idle Timeout")
 	if err != nil {
 		s.Config.IdleTimeout = constants.DefaultIdleTimeout
 	} else {
 		s.Config.IdleTimeout = time.Duration(idleTimeout) * time.Second
 	}
 
-	maxHeaderBytes, err := c.GetenvInt("SAH_SERVER_MAX_HEADER_BYTES", "SGX Attestation Hub Service Max Header Bytes Timeout")
+	maxHeaderBytes, err := c.GetenvInt("SHUB_SERVER_MAX_HEADER_BYTES", "SGX Attestation Hub Service Max Header Bytes Timeout")
 	if err != nil {
 		s.Config.MaxHeaderBytes = constants.DefaultMaxHeaderBytes
 	} else {
 		s.Config.MaxHeaderBytes = maxHeaderBytes
 	}
 
-	logMaxLen, err := c.GetenvInt("SAH_LOG_MAX_LENGTH", "SGX Attestation Hub Service Log maximum length")
+	logMaxLen, err := c.GetenvInt("SHUB_LOG_MAX_LENGTH", "SGX Attestation Hub Service Log maximum length")
 	if err != nil || logMaxLen < constants.DefaultLogEntryMaxLength {
 		s.Config.LogMaxLength = constants.DefaultLogEntryMaxLength
 	} else {
@@ -93,7 +93,7 @@ func (s Server) Run(c setup.Context) error {
 	}
 
 	s.Config.LogEnableStdout = false
-	logEnableStdout, err := c.GetenvString("SAH_ENABLE_CONSOLE_LOG", "SGX Attestation Hub Service Enable standard output")
+	logEnableStdout, err := c.GetenvString("SHUB_ENABLE_CONSOLE_LOG", "SGX Attestation Hub Service Enable standard output")
 	if err != nil || len(logEnableStdout) == 0 {
 		s.Config.LogEnableStdout = false
 	} else {
@@ -102,7 +102,7 @@ func (s Server) Run(c setup.Context) error {
 
 	err = s.Config.Save()
 	if err != nil {
-		return errors.Wrap(err, "failed to save SAH config")
+		return errors.Wrap(err, "failed to save SHUB config")
 	}
 	return nil
 }

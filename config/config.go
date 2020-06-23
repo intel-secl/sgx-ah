@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 	commLog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/lib/common/v2/setup"
-	"intel/isecl/sgx-attestation-hub/constants"
+	"intel/isecl/shub/constants"
 	"os"
 	"path"
 	"strings"
@@ -20,8 +20,6 @@ import (
 )
 
 var slog = commLog.GetSecurityLogger()
-
-// should move this into lib common, as its duplicated across SAH and SAH
 
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
 // Probably should embed a config generic struct
@@ -47,7 +45,7 @@ type Configuration struct {
 		IntervalMins        int
 		LockoutDurationMins int
 	}
-	SAH struct {
+	SHUB struct {
 		User     string
 		Password string
 	}
@@ -128,20 +126,20 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		return errorLog.Wrap(errors.New("CMS_TLS_CERT_SHA384 is not defined in environment"), "SaveConfiguration() ENV variable not found")
 	}
 
-	sahAASUser, err := c.GetenvString(constants.SAH_USER, "SAH Service Username")
-	if err == nil && sahAASUser != "" {
-		conf.SAH.User = sahAASUser
-	} else if conf.SAH.User == "" {
-		commLog.GetDefaultLogger().Error("SAH_ADMIN_USERNAME is not defined in environment or configuration file")
-		return errorLog.Wrap(err, "SAH_ADMIN_USERNAME is not defined in environment or configuration file")
+	shubAASUser, err := c.GetenvString(constants.SHUB_USER, "SHUB Service Username")
+	if err == nil && shubAASUser != "" {
+		conf.SHUB.User = shubAASUser
+	} else if conf.SHUB.User == "" {
+		commLog.GetDefaultLogger().Error("SHUB_ADMIN_USERNAME is not defined in environment or configuration file")
+		return errorLog.Wrap(err, "SHUB_ADMIN_USERNAME is not defined in environment or configuration file")
 	}
 
-	sahAASPassword, err := c.GetenvSecret(constants.SAH_PASSWORD, "SAH Service Password")
-	if err == nil && sahAASPassword != "" {
-		conf.SAH.Password = sahAASPassword
-	} else if strings.TrimSpace(conf.SAH.Password) == "" {
-		commLog.GetDefaultLogger().Error("SAH_ADMIN_PASSWORD is not defined in environment or configuration file")
-		return errorLog.Wrap(err, "SAH_ADMIN_PASSWORD is not defined in environment or configuration file")
+	shubAASPassword, err := c.GetenvSecret(constants.SHUB_PASSWORD, "SHUB Service Password")
+	if err == nil && shubAASPassword != "" {
+		conf.SHUB.Password = shubAASPassword
+	} else if strings.TrimSpace(conf.SHUB.Password) == "" {
+		commLog.GetDefaultLogger().Error("SHUB_ADMIN_PASSWORD is not defined in environment or configuration file")
+		return errorLog.Wrap(err, "SHUB_ADMIN_PASSWORD is not defined in environment or configuration file")
 	}
 
 	shvsBaseUrl, err := c.GetenvString("SHVS_BASE_URL", "SHVS Base URL")
@@ -167,11 +165,11 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		return errorLog.Wrap(errors.New("AAS_API_URL is not defined in environment"), "SaveConfiguration() ENV variable not found")
 	}
 
-	tlsCertCN, err := c.GetenvString("SAH_TLS_CERT_CN", "SAH TLS Certificate Common Name")
+	tlsCertCN, err := c.GetenvString("SHUB_TLS_CERT_CN", "SHUB TLS Certificate Common Name")
 	if err == nil && tlsCertCN != "" {
 		conf.Subject.TLSCertCommonName = tlsCertCN
 	} else if conf.Subject.TLSCertCommonName == "" {
-		conf.Subject.TLSCertCommonName = constants.DefaultSAHTlsCn
+		conf.Subject.TLSCertCommonName = constants.DefaultSHUBTlsCn
 	}
 
 	tlsKeyPath, err := c.GetenvString("KEY_PATH", "Path of file where TLS key needs to be stored")
@@ -188,9 +186,9 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		conf.TLSCertFile = constants.DefaultTLSCertFile
 	}
 
-	logLevel, err := c.GetenvString("SAH_LOGLEVEL", "SAH Log Level")
+	logLevel, err := c.GetenvString("SHUB_LOGLEVEL", "SHUB Log Level")
 	if err != nil {
-		slog.Infof("config/config:SaveConfiguration() %s not defined, using default log level: Info", constants.SAHLogLevel)
+		slog.Infof("config/config:SaveConfiguration() %s not defined, using default log level: Info", constants.SHUBLogLevel)
 		conf.LogLevel = log.InfoLevel
 	} else {
 		llp, err := log.ParseLevel(logLevel)
@@ -207,14 +205,14 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 	if err == nil && sanList != "" {
 		conf.CertSANList = sanList
 	} else if conf.CertSANList == "" {
-		conf.CertSANList = constants.DefaultSAHTlsSan
+		conf.CertSANList = constants.DefaultSHUBTlsSan
 	}
 
-	schedulerTimeout, err := c.GetenvInt("SAH_SCHEDULER_TIMER", "SAHUB Scheduler Timeout Seconds")
+	schedulerTimeout, err := c.GetenvInt("SHUB_SCHEDULER_TIMER", "SHUB Scheduler Timeout Seconds")
 	if err == nil && schedulerTimeout != 0 {
 		conf.SchedulerTimer = schedulerTimeout
 	} else if conf.SchedulerTimer == 0 {
-		conf.SchedulerTimer = constants.DefaultSAHSchedulerTimer
+		conf.SchedulerTimer = constants.DefaultSHUBSchedulerTimer
 	}
 
         return conf.Save()
