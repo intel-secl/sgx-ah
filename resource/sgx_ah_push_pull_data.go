@@ -18,6 +18,7 @@ type HostPlatformData struct {
 	FLCEnabled   bool   `json:"flc_enabled"`
 	EPCSize      string `json:"epc_size"`
 	TCBUpToDate  bool   `json:"tcb_upToDate"`
+	ValidTo      string `json:"validTo"`
 }
 
 type HostPlatformDataArray []HostPlatformData
@@ -102,6 +103,7 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 				FLCEnabled:    platformDataResp[0].FLCEnabled,
 				EPCSize:       platformDataResp[0].EPCSize,
 				TCBUpToDate:   platformDataResp[0].TCBUpToDate,
+				ValidTo:       platformDataResp[0].ValidTo,
 			}
 			err = sahDB.HostRepository().Update(host)
 			if err != nil {
@@ -121,12 +123,12 @@ func FetchAllHostsFromHVS(sahDB repository.SAHDatabase) error {
 				FLCEnabled:    platformDataResp[0].FLCEnabled,
 				EPCSize:       platformDataResp[0].EPCSize,
 				TCBUpToDate:   platformDataResp[0].TCBUpToDate,
+				ValidTo:       platformDataResp[0].ValidTo,
 			}
 			_, err = sahDB.HostRepository().Create(host)
 			if err != nil {
 				log.WithError(err).Errorf("resource/sgx_ah_push_pull_data: FetchAllHostsFromHVS() Error creating host record of host %s in DB", hvsResponse[i].HostName)
 				continue
-
 			}
 		}
 	}
@@ -202,6 +204,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 				FLCEnabled:    hostPlatformData[i].FLCEnabled,
 				EPCSize:       hostPlatformData[i].EPCSize,
 				TCBUpToDate:   hostPlatformData[i].TCBUpToDate,
+				ValidTo:       hostPlatformData[i].ValidTo,
 			}
 
 			_, err := sahDB.HostRepository().Create(host)
@@ -223,6 +226,7 @@ func FetchHostRegisteredInLastFewMinutes(sahDB repository.SAHDatabase, hostRefre
 				FLCEnabled:    hostPlatformData[i].FLCEnabled,
 				EPCSize:       hostPlatformData[i].EPCSize,
 				TCBUpToDate:   hostPlatformData[i].TCBUpToDate,
+				ValidTo:       hostPlatformData[i].ValidTo,
 			}
 			err := sahDB.HostRepository().Update(host)
 			if err != nil {

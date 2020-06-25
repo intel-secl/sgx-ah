@@ -21,6 +21,7 @@ type Host struct {
 	FLCEnabled    bool      `json:"flc_enabled"`
 	EPCSize       string    `json:"epc_size"`
 	TCBUpToDate   bool      `json:"tcb_upToDate"`
+	ValidTo       string    `json:"validTo"`
 	Deleted       bool      `json:"-" gorm:"type:bool;not null;default:false"`
 }
 

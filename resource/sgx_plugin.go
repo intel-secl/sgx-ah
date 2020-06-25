@@ -12,6 +12,8 @@ import (
 	"intel/isecl/sgx-attestation-hub/repository"
 	"intel/isecl/sgx-attestation-hub/resource/plugins"
 	"intel/isecl/sgx-attestation-hub/types"
+	"strconv"
+	"time"
 
 	"crypto"
 	"crypto/rand"
@@ -283,7 +285,21 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 	hostPlatformData.TcbUpToDate = h1.TCBUpToDate
 	hostPlatformData.Epc_size = h1.EPCSize
 	hostPlatformData.Epc_size = strings.Replace(hostPlatformData.Epc_size, " ", "", -1) ///This is so because in K8S CRD can't have spaces
-	hostPlatformData.ValidTo = "2021-08-28T13:05:05.932Z"
+
+	twiceSchedulerTime := strconv.Itoa(constants.DefaultSAHSchedulerTimer * 2)
+	parsedDuration, _ := time.ParseDuration(twiceSchedulerTime + "s")
+	updatedTime := time.Now().UTC().Add(parsedDuration)
+	formattedTime := updatedTime.Format(time.RFC3339)
+	parsedTime, err := time.Parse(time.RFC3339, h1.ValidTo)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error parsing time string")
+	}
+
+	if parsedTime.After(updatedTime) {
+		hostPlatformData.ValidTo = h1.ValidTo
+	} else{
+		hostPlatformData.ValidTo = formattedTime
+	}
 
 	log.Debug("hostPlatformData: ", hostPlatformData)
 	trustReportBytes, err := (json.Marshal(hostPlatformData))
