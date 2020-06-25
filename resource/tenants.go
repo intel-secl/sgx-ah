@@ -497,6 +497,27 @@ func deleteTenant(db repository.SAHDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusInternalServerError}
 		}
 
+		mappings, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID:tenant.Id})
+		if len(mappings) == 0 || err != nil {
+			log.WithError(err).Info("resource/tenants: deleteTenant() Cannot retrieve mappings of the corresponding tenant")
+			w.WriteHeader(http.StatusNotFound)
+			return nil
+		}
+		for _, mapping := range mappings {
+			tenantMappingInput := types.HostTenantMapping{
+				Id:               mapping.Id,
+				HostHardwareUUID: mapping.HostHardwareUUID,
+				TenantUUID:       mapping.TenantUUID,
+				CreatedTime:      mapping.CreatedTime,
+				UpdatedTime:      time.Now(),
+				Deleted:          true,
+			}
+
+			_, err = db.HostTenantMappingRepository().Update(tenantMappingInput)
+			if err != nil {
+				return &resourceError{Message: err.Error(), StatusCode: http.StatusInternalServerError}
+			}
+		}
 		slog.WithField("tenant", tenant).Info("Tenant deleted by:", r.RemoteAddr)
 		w.WriteHeader(http.StatusNoContent)
 		return nil
