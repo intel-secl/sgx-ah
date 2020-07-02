@@ -47,7 +47,7 @@ func FetchAllHostsFromHVS(shubDB repository.SHUBDatabase) error {
 		return errors.Wrap(parseErr, "resource/shub_push_pull_data: FetchAllHostsFromHVS() Configured SHVS URL is malformed")
 	}
 
-	resp, err := GetApi("GET", SHVSUrl.String())
+	resp, err := getApi("GET", SHVSUrl.String())
 	if err != nil {
 		return errors.Wrap(err, "resource/shub_push_pull_data: FetchAllHostsFromHVS() Error fetching hosts from HVS")
 	}
@@ -68,7 +68,7 @@ func FetchAllHostsFromHVS(shubDB repository.SHUBDatabase) error {
 
 	for i := 0; i < numberOfHosts; i++ {
 		url := conf.ShvsBaseUrl + "platform-data?HostName=" + hvsResponse[i].HostName
-		response, err := GetApi("GET", url)
+		response, err := getApi("GET", url)
 		if err != nil {
 			log.WithError(err).Errorf("resource/shub_push_pull_data: FetchAllHostsFromHVS() Error fetching platform data of the host %s from HVS", hvsResponse[i].HostName)
 			continue
@@ -146,7 +146,7 @@ func FetchHostRegisteredInLastFewMinutes(shubDB repository.SHUBDatabase, hostRef
 	}
 
 	getShubUrl := conf.ShvsBaseUrl + "platform-data?numberOfMinutes=" + strconv.Itoa(hostRefreshTimeInMinutes)
-	resp, err := GetApi("GET", getShubUrl)
+	resp, err := getApi("GET", getShubUrl)
 	if err != nil {
 		return errors.Wrap(err, "resource/shub_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching platform data of the hosts updated/registered in last few minutes")
 	}
@@ -169,7 +169,7 @@ func FetchHostRegisteredInLastFewMinutes(shubDB repository.SHUBDatabase, hostRef
 	// below code to fetch platform data for each host
 	for i := 0; i < numberOfHostsUpdated; i++ {
 		getShubUrl = conf.ShvsBaseUrl + "hosts/" + hostPlatformData[i].Id
-		response, err := GetApi("GET", getShubUrl)
+		response, err := getApi("GET", getShubUrl)
 		if err != nil {
 			log.WithError(err).Errorf("resource/shub_push_pull_data: FetchHostRegisteredInLastFewMinutes() Error fetching host %s updated/registered in last few minutes", hostPlatformData[i].Id)
 			continue

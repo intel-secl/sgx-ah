@@ -50,4 +50,3 @@ func (m *MockHostRepository) Delete(h types.Host) error {
 	}
 	return nil
 }
-

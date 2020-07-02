@@ -9,10 +9,10 @@ import (
 )
 
 type MockDatabase struct {
-	MockHostRepository                    MockHostRepository
-	MockTenantRepository                  MockTenantRepository
-	MockHostTenantMappingRepository       MockHostTenantMappingRepository
-	MockTenantPluginCredentialRepository  MockTenantPluginCredentialRepository
+	MockHostRepository                   MockHostRepository
+	MockTenantRepository                 MockTenantRepository
+	MockHostTenantMappingRepository      MockHostTenantMappingRepository
+	MockTenantPluginCredentialRepository MockTenantPluginCredentialRepository
 }
 
 func (m *MockDatabase) Migrate() error {

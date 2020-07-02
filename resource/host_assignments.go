@@ -64,7 +64,7 @@ func createOrUpdateMapping(db repository.SHUBDatabase, input HostTenantMappingRe
 	defer log.Trace("resource/host_assignments: createMapping() Leaving")
 
 	var mappingResponse HostTenantMappingResponse
-	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId, Deleted:false})
+	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId, Deleted: false})
 	if err != nil {
 		log.WithError(err).WithField("id", input.TenantId).Info("createMapping() Tenant does not exist with id provided")
 		return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
@@ -138,7 +138,7 @@ func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: createHostTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: createHostTenantMapping() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, constants.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -184,8 +184,8 @@ func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 			return err
 		}
 
-		mappingResponse := HostTenantMappingResponse {
-			Mapping:mappingRes,
+		mappingResponse := HostTenantMappingResponse{
+			Mapping: mappingRes,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated) // HTTP 201
@@ -204,7 +204,7 @@ func getHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: getHostTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: getHostTenantMapping() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, constants.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -247,7 +247,7 @@ func queryHostTenantMappings(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: queryHostTenantMappings() Entering")
 		defer log.Trace("resource/host_assignments: queryHostTenantMappings() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, constants.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -302,7 +302,7 @@ func deleteTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/host_assignments: deleteTenantMapping() Entering")
 		defer log.Trace("resource/host_assignments: deleteTenantMapping() Leaving")
 
-		err := AuthorizeEndpoint(r, constants.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, constants.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}

@@ -76,4 +76,3 @@ func (r *PostgresHostTenantMappingRepository) Delete(m types.HostTenantMapping) 
 	}
 	return nil
 }
-

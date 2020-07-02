@@ -24,10 +24,10 @@ var slog = commLog.GetSecurityLogger()
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
 // Probably should embed a config generic struct
 type Configuration struct {
-	configFile string
-	Port       int
+	configFile       string
+	Port             int
 	CmsTlsCertDigest string
-	Postgres   struct {
+	Postgres         struct {
 		DBName   string
 		Username string
 		Password string
@@ -36,7 +36,7 @@ type Configuration struct {
 		SSLMode  string
 		SSLCert  string
 	}
-	LogMaxLength	int
+	LogMaxLength    int
 	LogEnableStdout bool
 	LogLevel        log.Level
 
@@ -57,7 +57,7 @@ type Configuration struct {
 	AuthServiceUrl string
 	ShvsBaseUrl    string
 	SchedulerTimer int
-	Subject struct {
+	Subject        struct {
 		TLSCertCommonName string
 	}
 	TLSKeyFile        string

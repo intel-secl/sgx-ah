@@ -74,27 +74,27 @@ func addJWTToken(req *http.Request) error {
 	return nil
 }
 
-func GetApi(requestType string, url string) (*http.Response, error) {
+func getApi(requestType string, url string) (*http.Response, error) {
 
 	client, err := clients.HTTPClientWithCADir(constants.TrustedCAsStoreDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetApi : Error in getting client object")
+		return nil, errors.Wrap(err, "getApi : Error in getting client object")
 	}
 
 	req, err := http.NewRequest(requestType, url, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetApi: Failed to Get New request")
+		return nil, errors.Wrap(err, "getApi: Failed to Get New request")
 	}
 	req.Header.Set("Accept", "application/json")
 
 	err = addJWTToken(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "resource/utils: GetApi() Failed to add JWT token")
+		return nil, errors.Wrap(err, "resource/utils: getApi() Failed to add JWT token")
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "resource/utils: GetApi() Error from response")
+		return nil, errors.Wrap(err, "resource/utils: getApi() Error from response")
 	}
 	log.Debug("FetchAllHostsFromHVS: Status: ", resp.StatusCode)
 
@@ -105,16 +105,16 @@ func GetApi(requestType string, url string) (*http.Response, error) {
 		aasRWLock.Unlock()
 		err = addJWTToken(req)
 		if err != nil {
-			return nil, errors.Wrap(err, "resource/utils: GetApi() Failed to add JWT token")
+			return nil, errors.Wrap(err, "resource/utils: getApi() Failed to add JWT token")
 		}
 		resp, err = client.Do(req)
 		if err != nil {
-			return nil, errors.Wrap(err, "resource/utils: GetApi() Error from response")
+			return nil, errors.Wrap(err, "resource/utils: getApi() Error from response")
 		}
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Wrapf(err,"resource/utils: GetApi() Invalid status code received:%d", resp.StatusCode)
+		return nil, errors.Wrapf(err, "resource/utils: getApi() Invalid status code received:%d", resp.StatusCode)
 	}
 	return resp, nil
 }

@@ -8,12 +8,12 @@ package resource
 import (
 	"encoding/json"
 	"github.com/pkg/errors"
-	"strconv"
-	"time"
 	"intel/isecl/shub/constants"
 	"intel/isecl/shub/repository"
 	"intel/isecl/shub/resource/plugins"
 	"intel/isecl/shub/types"
+	"strconv"
+	"time"
 
 	"crypto"
 	"crypto/rand"
@@ -297,7 +297,7 @@ func populateHostDetails(h1 *types.Host) (*types.HostDetails, error) {
 
 	if parsedTime.After(updatedTime) {
 		hostPlatformData.ValidTo = h1.ValidTo
-	} else{
+	} else {
 		hostPlatformData.ValidTo = formattedTime
 	}
 

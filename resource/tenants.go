@@ -31,10 +31,10 @@ type Plugin struct {
 }
 
 type Tenant struct {
-	TenantId        string    `json:"id,omitempty"`
-	TenantName      string    `json:"name"`
-	TenantDeleted   bool      `json:"deleted"`
-	Plugins         []*Plugin `json:"plugins"`
+	TenantId      string    `json:"id,omitempty"`
+	TenantName    string    `json:"name"`
+	TenantDeleted bool      `json:"deleted"`
+	Plugins       []*Plugin `json:"plugins"`
 }
 
 func SGXTenantRegister(r *mux.Router, db repository.SHUBDatabase) {
@@ -142,7 +142,7 @@ func deleteTenantPluginCredential(db repository.SHUBDatabase, updatedTenant *typ
 
 	tenantPluginCredentials, err := db.TenantPluginCredentialRepository().RetrieveByTenantId(updatedTenant.Id)
 	if err != nil {
-		return errors.Wrap(err,"resource/tenants:deleteTenantPluginCredential() Error in retrieving plugin credentials for provided tenant")
+		return errors.Wrap(err, "resource/tenants:deleteTenantPluginCredential() Error in retrieving plugin credentials for provided tenant")
 	}
 	for _, tenantPluginCredential := range tenantPluginCredentials {
 		err := db.TenantPluginCredentialRepository().Delete(tenantPluginCredential)
@@ -159,7 +159,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants:registerTenant() Entering")
 		defer log.Trace("resource/tenants:registerTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
-		validateResult := ValidateInput(tenant)
+		validateResult := validateInput(tenant)
 		if validateResult != "" {
 			log.Error("resource/tenants:registerTenant() input validation failed")
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
@@ -212,7 +212,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return err
 		}
 
-		tenantResponse := Tenant {
+		tenantResponse := Tenant{
 			TenantId:      created.Id,
 			TenantName:    created.TenantName,
 			TenantDeleted: created.Deleted,
@@ -235,7 +235,7 @@ func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants: getTenant() Entering")
 		defer log.Trace("resource/tenants: getTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -259,7 +259,7 @@ func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return nil
 		}
-		
+
 		var tenantIn Tenant
 		config := tenant.Config
 		err = json.Unmarshal([]byte(config), &tenantIn)
@@ -290,7 +290,7 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants:queryTenants() Entering")
 		defer log.Trace("resource/tenants:queryTenants() Leaving")
 
-		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 		tenantName := r.URL.Query().Get("nameEqualTo")
 
 		if len(tenantName) != 0 {
-			if validationErr := ValidateNameString(tenantName); validationErr != nil {
+			if validationErr := validateNameString(tenantName); validationErr != nil {
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}
@@ -316,7 +316,7 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 		}
 
 		tenants := make([]Tenant, 0)
-		for _ , tenant := range allTenants {
+		for _, tenant := range allTenants {
 			var tenantIn Tenant
 			if tenant.Deleted == true {
 				log.Debugf("resource/tenants: queryTenants() tenant with id %s was deleted, hence not returning in the results", tenant.Id)
@@ -329,7 +329,7 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 				return err
 			}
 
-			response := Tenant {
+			response := Tenant{
 				TenantId:      tenant.Id,
 				TenantName:    tenantIn.TenantName,
 				TenantDeleted: tenantIn.TenantDeleted,
@@ -356,7 +356,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants:updateTenant() Entering")
 		defer log.Trace("resource/tenants:updateTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -394,7 +394,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
-		validateResult := ValidateInput(tenant)
+		validateResult := validateInput(tenant)
 		if validateResult != "" {
 			log.Error("resource/tenants:updateTenant() input validation failed")
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
@@ -434,7 +434,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return err
 		}
 
-		tenantResponse := Tenant {
+		tenantResponse := Tenant{
 			TenantId:      updatedTenant.Id,
 			TenantName:    updatedTenant.TenantName,
 			TenantDeleted: updatedTenant.Deleted,
@@ -458,7 +458,7 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		log.Trace("resource/tenants: deleteTenant() Entering")
 		defer log.Trace("resource/tenants: deleteTenant() Leaving")
 
-		err := AuthorizeEndpoint(r, consts.TenantManagerGroupName, true)
+		err := authorizeEndpoint(r, consts.TenantManagerGroupName, true)
 		if err != nil {
 			return err
 		}
@@ -497,7 +497,7 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusInternalServerError}
 		}
 
-		mappings, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID:tenant.Id})
+		mappings, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id})
 		if len(mappings) == 0 || err != nil {
 			log.WithError(err).Info("resource/tenants: deleteTenant() Cannot retrieve mappings of the corresponding tenant")
 			w.WriteHeader(http.StatusNotFound)
