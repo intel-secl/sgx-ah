@@ -31,7 +31,7 @@ func (r *PostgresTenantRepository) Retrieve(t types.Tenant) (*types.Tenant, erro
 	defer log.Trace("repository/postgres/pg_tenant: Retrieve() Leaving")
 
 	var s types.Tenant
-	err := r.db.Where(&t).First(&s).Error
+	err := r.db.Where("deleted = (?) and id = (?)", t.Deleted, t.Id).First(&s).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "Retrieve(): failed to retrieve Tenant")
 	}

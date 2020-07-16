@@ -253,13 +253,7 @@ func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return nil
 		}
-
-		if tenant.Deleted == true {
-			log.Errorf("resource/tenants: getTenant() tenant with id %s was deleted", id)
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-
+		
 		var tenantIn Tenant
 		config := tenant.Config
 		err = json.Unmarshal([]byte(config), &tenantIn)
@@ -376,12 +370,6 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return nil
 		}
 
-		if t.Deleted == true {
-			log.Errorf("resource/tenants: updateTenant() tenant with id %s was deleted", id)
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-
 		if r.ContentLength == 0 {
 			return &resourceError{Message: "The request body was not provided", StatusCode: http.StatusBadRequest}
 		}
@@ -473,12 +461,6 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		tenant, err := db.TenantRepository().Retrieve(types.Tenant{Id: id})
 		if tenant == nil || err != nil {
 			log.WithError(err).WithField("id", id).Info("resource/tenants: deleteTenant() tenant with specified id does not exist")
-			w.WriteHeader(http.StatusNotFound)
-			return nil
-		}
-
-		if tenant.Deleted == true {
-			log.Errorf("resource/tenants: deleteTenant() tenant with id %s was deleted", id)
 			w.WriteHeader(http.StatusNotFound)
 			return nil
 		}

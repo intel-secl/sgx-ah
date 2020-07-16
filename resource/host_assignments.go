@@ -64,7 +64,7 @@ func createOrUpdateMapping(db repository.SHUBDatabase, input HostTenantMappingRe
 	defer log.Trace("resource/host_assignments: createMapping() Leaving")
 
 	var mappingResponse HostTenantMappingResponse
-	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId, Deleted: false})
+	_, err := db.TenantRepository().Retrieve(types.Tenant{Id: input.TenantId})
 	if err != nil {
 		log.WithError(err).WithField("id", input.TenantId).Info("createMapping() Tenant does not exist with id provided")
 		return nil, &resourceError{Message: err.Error(), StatusCode: http.StatusNotFound}
