@@ -10,6 +10,7 @@ type HostTenantMappingRepository interface {
 	Create(types.HostTenantMapping) (*types.HostTenantMapping, error)
 	Retrieve(types.HostTenantMapping) (*types.HostTenantMapping, error)
 	RetrieveAll(types.HostTenantMapping) (types.HostTenantMappings, error)
+	RetrieveAllActiveMappingsByTenantId(types.HostTenantMapping) (types.HostTenantMappings, error)
 	Update(types.HostTenantMapping) (*types.HostTenantMapping, error)
 	Delete(types.HostTenantMapping) error
 }

@@ -38,6 +38,18 @@ func (r *PostgresHostRepository) Retrieve(h types.Host) (*types.Host, error) {
 	return &p, nil
 }
 
+func (r *PostgresHostRepository) RetrieveActiveHostByHUUID(h types.Host) (*types.Host, error) {
+	log.Trace("repository/postgres/pg_host: RetrieveActiveHostByHUUID() Entering")
+	defer log.Trace("repository/postgres/pg_host: RetrieveActiveHostByHUUID() Leaving")
+
+	var p types.Host
+	err := r.db.Where("deleted = (?) and hardware_uuid = (?)", false, h.HardwareUUID).First(&p).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "RetrieveActiveHostByHUUID(): failed to retrieve active Host")
+	}
+	return &p, nil
+}
+
 func (r *PostgresHostRepository) RetrieveAll(h types.Host) (types.Hosts, error) {
 	log.Trace("repository/postgres/pg_host: RetrieveAll() Entering")
 	defer log.Trace("repository/postgres/pg_host: RetrieveAll() Leaving")

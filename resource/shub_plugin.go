@@ -158,9 +158,9 @@ func SynchAttestationInfo(db repository.SHUBDatabase) error {
 			log.WithError(err).WithField("tenant id", tenant.Id).Info("synchAttestationInfo: Failed to get configurations for tenant")
 			continue
 		}
-		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id, Deleted: false})
+		tenant_mapping, err := db.HostTenantMappingRepository().RetrieveAllActiveMappingsByTenantId(types.HostTenantMapping{TenantUUID: tenant.Id})
 		if err != nil {
-			log.WithError(err).WithField("tenant id", tenant.Id).Info("synchAttestationInfo: Failed to get tenant mapping")
+			log.WithError(err).WithField("tenant id", tenant.Id).Info("synchAttestationInfo: Failed to get tenant mapping by tenant Id")
 			continue
 		} else if len(tenant_mapping) == 0 {
 			log.Error("synchAttestationInfo: no host assigned to the tenant: ", tenant.Id)
@@ -171,8 +171,11 @@ func SynchAttestationInfo(db repository.SHUBDatabase) error {
 		var hostDataSlice []types.HostDetails
 		for _, mapping := range tenant_mapping {
 			hardwareuuid := mapping.HostHardwareUUID
-			host, err := db.HostRepository().Retrieve(types.Host{HardwareUUID: hardwareuuid, Deleted: false})
-			if host == nil {
+			host, err := db.HostRepository().RetrieveActiveHostByHUUID(types.Host{HardwareUUID: hardwareuuid})
+			if err != nil {
+				log.WithError(err).WithField("hardware uuid", hardwareuuid).Info("synchAttestationInfo: Failed to get host by hardware uuid")
+				continue
+			} else if host == nil {
 				log.Error("synchAttestationInfo: No host with this uuid: ", hardwareuuid)
 				continue
 			}

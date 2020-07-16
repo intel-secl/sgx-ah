@@ -57,6 +57,18 @@ func (r *PostgresHostTenantMappingRepository) RetrieveAll(m types.HostTenantMapp
 	return ms, nil
 }
 
+func (r *PostgresHostTenantMappingRepository) RetrieveAllActiveMappingsByTenantId(m types.HostTenantMapping) (types.HostTenantMappings, error) {
+	log.Trace("repository/postgres/pg_host_tenant_mapping: RetrieveAllActiveMappingsByTenantId() Entering")
+	defer log.Trace("repository/postgres/pg_host_tenant_mapping: RetrieveAllActiveMappingsByTenantId() Leaving")
+
+	var ms types.HostTenantMappings
+	err := r.db.Where("deleted = (?) and tenant_uuid = (?)", false, m.TenantUUID).Find(&ms).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "RetrieveAllActiveMappingsByTenantId(): failed to retrieve all active Host Tenant Mappings")
+	}
+	return ms, nil
+}
+
 func (r *PostgresHostTenantMappingRepository) Update(m types.HostTenantMapping) (*types.HostTenantMapping, error) {
 	log.Trace("repository/postgres/pg_host_tenant_mapping: Update() Entering")
 	defer log.Trace("repository/postgres/pg_host_tenant_mapping: Update() Leaving")
