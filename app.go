@@ -655,7 +655,6 @@ func validateSetupArgs(cmd string, args []string) error {
 		return validateCmdAndEnv(env_names_cmd_opts, fs)
 
 	case "server":
-		// this has a default port value on 8443
 		return nil
 
 	case "tls":
