@@ -5,8 +5,6 @@
 #to customize, export the correct values before running the script
 
 echo "Setting up SHUB Related roles and user in AAS Database"
-unset https_proxy
-unset http_proxy
 
 #Get the value of AAS IP address and port. Default vlue is also provided.
 aas_hostname=${AAS_URL:-"https://10.80.245.104:8444"}
@@ -42,8 +40,8 @@ fi
 create_shub_user() {
 cat > $tmpdir/user.json << EOF
 {
-		"username":"shubuser@shub",
-		"password":"shubpassword"
+"username":"shubuser@shub",
+"password":"shubpassword"
 }
 EOF
 
@@ -59,7 +57,6 @@ if [ $actual_status -ne 201 ]; then
 fi
 
 if [ -s $tmpdir/user_response.json ]; then
-	#jq < $tmpdir/user_response.json
 	user_id=$(jq -r '.user_id' < $tmpdir/user_response.json)
 	if [ -n "$user_id" ]; then
 		echo "Created user id: $user_id"
@@ -97,14 +94,14 @@ fi
 echo "$role_id"
 }
 
-create_roles() {
-
-		local cms_role_id=$( create_user_roles "CMS" "CertApprover" "CN=$CN;SAN=$IPADDR;CERTTYPE=TLS" ) #get roleid
-		local shvs_role_id1=$( create_user_roles "SHVS" "HostsListReader" "" )
-		local shvs_role_id2=$( create_user_roles "SHVS" "HostDataReader" "" )
-		local shub_role_id=$( create_user_roles "SHUB" "TenantManager" "" )
-		ROLE_ID_TO_MAP=`echo \"$cms_role_id\",\"$shvs_role_id1\",\"$shvs_role_id2\",\"$shub_role_id\"`
-		echo $ROLE_ID_TO_MAP
+create_roles()
+{
+	local cms_role_id=$( create_user_roles "CMS" "CertApprover" "CN=$CN;SAN=$IPADDR;CERTTYPE=TLS" ) #get roleid
+	local shvs_role_id1=$( create_user_roles "SHVS" "HostsListReader" "" )
+	local shvs_role_id2=$( create_user_roles "SHVS" "HostDataReader" "" )
+	local shub_role_id=$( create_user_roles "SHUB" "TenantManager" "" )
+	ROLE_ID_TO_MAP=`echo \"$cms_role_id\",\"$shvs_role_id1\",\"$shvs_role_id2\",\"$shub_role_id\"`
+	echo $ROLE_ID_TO_MAP
 }
 
 #Map shubUser to Roles
@@ -124,7 +121,6 @@ fi
 }
 
 SHUB_SETUP_API="create_shub_user create_roles mapUser_to_role"
-#SHUB_SETUP_API="mapUser_to_role"
 
 status=
 for api in $SHUB_SETUP_API
@@ -132,10 +128,10 @@ do
 	echo $api
 	eval $api
     	status=$?
-    if [ $status -ne 0 ]; then
-        echo "SHUB-AAS User/Roles creation failed.: $api"
-        break;
-    fi
+	if [ $status -ne 0 ]; then
+		echo "SHUB-AAS User/Roles creation failed.: $api"
+		break;
+	fi
 done
 
 if [ $status -eq 0 ]; then
@@ -159,4 +155,4 @@ else
 fi
 
 # cleanup
-#rm -rf $tmpdir
+rm -rf $tmpdir

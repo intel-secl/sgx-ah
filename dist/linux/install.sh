@@ -26,11 +26,10 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-echo "Setting up SGX Attestation Hub Service Linux User..."
+echo "Setting up SGX Hub Service Linux User..."
 id -u $SERVICE_USERNAME 2> /dev/null || useradd --shell /bin/false $SERVICE_USERNAME 
 
-echo "Installing SGX Attestation Hub Service..."
-
+echo "Installing SGX Hub Service..."
 
 COMPONENT_NAME=shub
 PRODUCT_HOME=/opt/$COMPONENT_NAME
@@ -57,7 +56,6 @@ for directory in $BIN_PATH $DB_SCRIPT_PATH $LOG_PATH $CONFIG_PATH $CERTS_PATH $C
 
 done
 
-
 cp $COMPONENT_NAME $BIN_PATH/ && chown $SERVICE_USERNAME:$SERVICE_USERNAME $BIN_PATH/*
 chmod 700 $BIN_PATH/*
 ln -sfT $BIN_PATH/$COMPONENT_NAME /usr/bin/$COMPONENT_NAME
@@ -81,11 +79,10 @@ systemctl daemon-reload
 auto_install() {
   local component=${1}
   local cprefix=${2}
-  local yum_packages=$(eval "echo \$${cprefix}_YUM_PACKAGES")
+  local dnf_packages=$(eval "echo \$${cprefix}_YUM_PACKAGES")
   # detect available package management tools. start with the less likely ones to differentiate.
-  yum -y install $yum_packages
+  dnf -y install $dnf_packages
 }
-
 
 # SCRIPT EXECUTION
 logRotate_clear() {
@@ -138,7 +135,6 @@ if [ ! -a /etc/logrotate.d/shub ]; then
         $LOG_COPYTRUNCATE
 }" > /etc/logrotate.d/shub
 fi
-
 
 # check if SHUB_NOSETUP is defined
 if [ "${SHUB_NOSETUP,,}" == "true" ]; then
