@@ -46,7 +46,7 @@ const (
 	ServiceName                      = "SHUB"
 	TenantManagerGroupName           = "TenantManager"
 	SHUBUserName                     = "shub"
-	DefaultHttpPort                  = 9443
+	DefaultHttpPort                  = 14000
 	DefaultKeyAlgorithm              = "rsa"
 	DefaultKeyAlgorithmLength        = 3072
 	DefaultSHUBTlsSan                = "127.0.0.1,localhost"
