@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v2/log/message"
+	commLogMsg "intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/validation"
 	consts "intel/isecl/shub/constants"
 	"intel/isecl/shub/repository"
@@ -167,6 +168,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		var tenant Tenant
 
 		if r.ContentLength == 0 {
+			slog.Error("resource/tenants: registerTenant() The request body was not provided")
 			return &resourceError{Message: "The request body was not provided", StatusCode: http.StatusBadRequest}
 		}
 
@@ -174,13 +176,13 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		dec.DisallowUnknownFields()
 		err = dec.Decode(&tenant)
 		if err != nil {
-			log.WithError(err).Info("resource/tenants:registerTenant() Error decoding request input")
+			slog.WithError(err).Errorf("resource/tenants: registerTenant() %s :  Failed to decode request body", commLogMsg.InvalidInputBadEncoding)
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		validateResult := validateInput(tenant)
 		if validateResult != "" {
-			log.Error("resource/tenants:registerTenant() input validation failed")
+			slog.Error("resource/tenants:registerTenant() input validation failed")
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
 		}
 
@@ -226,6 +228,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			log.Tracef("%+v", err)
 			return &resourceError{Message: "Failed to register tenant - JSON encode failed", StatusCode: http.StatusInternalServerError}
 		}
+		slog.WithField("tenant", tenant).Info("Tenant registered by:", r.RemoteAddr)
 		return nil
 	}
 }
@@ -243,7 +246,7 @@ func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/tenants: getTenant() Error validating tenant Id")
+			slog.WithError(validationErr).WithField("id", id).Info("resource/tenants: getTenant() Error validating tenant Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
@@ -253,7 +256,7 @@ func getTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return nil
 		}
-		
+
 		var tenantIn Tenant
 		config := tenant.Config
 		err = json.Unmarshal([]byte(config), &tenantIn)
@@ -295,6 +298,7 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 
 		if len(tenantName) != 0 {
 			if validationErr := validateNameString(tenantName); validationErr != nil {
+				slog.WithError(validationErr).WithField("tenant name", tenantName).Info("resource/tenants: queryTenants() Error validating tenant name query param")
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}
@@ -316,7 +320,6 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 				log.Debugf("resource/tenants: queryTenants() tenant with id %s was deleted, hence not returning in the results", tenant.Id)
 				continue
 			}
-
 			config := tenant.Config
 			err = json.Unmarshal([]byte(config), &tenantIn)
 			if err != nil {
@@ -360,7 +363,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/tenants: updateTenant() Error validating tenant Id")
+			slog.WithError(validationErr).WithField("id", id).Info("resource/tenants: updateTenant() Error validating tenant Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 		t, err := db.TenantRepository().Retrieve(types.Tenant{Id: id})
@@ -371,6 +374,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		}
 
 		if r.ContentLength == 0 {
+			slog.Error("resource/tenants: updateTenant() The request body was not provided")
 			return &resourceError{Message: "The request body was not provided", StatusCode: http.StatusBadRequest}
 		}
 
@@ -378,13 +382,13 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		dec.DisallowUnknownFields()
 		err = dec.Decode(&tenant)
 		if err != nil {
-			log.WithError(err).Info("resource/tenants: updateTenant() Error decoding request input")
+			slog.WithError(err).Errorf("resource/tenants: updateTenant() %s :  Failed to decode request body", commLogMsg.InvalidInputBadEncoding)
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		validateResult := validateInput(tenant)
 		if validateResult != "" {
-			log.Error("resource/tenants:updateTenant() input validation failed")
+			slog.Error("resource/tenants:updateTenant() input validation failed")
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
 		}
 
@@ -454,7 +458,7 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/tenants: deleteTenant() Error validating tenant Id")
+			slog.WithError(validationErr).WithField("id", id).Info("resource/tenants: deleteTenant() Error validating tenant Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 

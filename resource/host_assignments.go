@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v2/log/message"
+	commLogMsg "intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/validation"
 	"intel/isecl/shub/constants"
 	"intel/isecl/shub/repository"
@@ -146,6 +147,7 @@ func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		var input HostTenantMappingRequest
 
 		if r.ContentLength == 0 {
+			slog.Error("resource/host_assignments: createHostTenantMapping() The request body was not provided")
 			return &resourceError{Message: "The request body was not provided", StatusCode: http.StatusBadRequest}
 		}
 
@@ -153,28 +155,30 @@ func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		dec.DisallowUnknownFields()
 		err = dec.Decode(&input)
 		if err != nil {
-			log.WithError(err).Info("createHostTenantMapping() Error decoding request input")
+			slog.WithError(err).Errorf("resource/host_assignments: createHostTenantMapping() %s :  Failed to decode request body", commLogMsg.InvalidInputBadEncoding)
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		if input.TenantId == "" {
+			slog.Error("resource/host_assignments: createHostTenantMapping() Missing mandatory configuration tenant Id")
 			return &resourceError{Message: "tenant uuid information is mandatory", StatusCode: http.StatusBadRequest}
 		}
 
 		if input.HardwareUUID == nil || len(input.HardwareUUID) == 0 {
+			slog.Error("resource/host_assignments: createHostTenantMapping() Missing mandatory configuration hardware UUID")
 			return &resourceError{Message: "hardware uuid information is mandatory", StatusCode: http.StatusBadRequest}
 		}
 
 		validationErr := validation.ValidateUUIDv4(input.TenantId)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating tenant Id")
+			slog.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating tenant Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
 		for _, huuid := range input.HardwareUUID {
 			validationErr = validation.ValidateHardwareUUID(huuid)
 			if validationErr != nil {
-				log.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating host hardware UUID")
+				slog.WithError(validationErr).WithField("tenant id", input.TenantId).Info("createHostTenantMapping() Error validating host hardware UUID")
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}
@@ -195,6 +199,7 @@ func createHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 			log.Tracef("%+v", err)
 			return &resourceError{Message: "Failed to create mapping - JSON encode failed", StatusCode: http.StatusInternalServerError}
 		}
+		slog.Info("resource/host_assignments: createHostTenantMapping() Mapping created by:", r.RemoteAddr)
 		return nil
 	}
 }
@@ -212,7 +217,7 @@ func getHostTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/host_assignments: getHostTenantMapping() Error validating mapping Id")
+			slog.WithError(validationErr).WithField("id", id).Info("resource/host_assignments: getHostTenantMapping() Error validating mapping Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
@@ -259,7 +264,7 @@ func queryHostTenantMappings(db repository.SHUBDatabase) errorHandlerFunc {
 		if len(tenantUUID) != 0 {
 			validationErr := validation.ValidateUUIDv4(tenantUUID)
 			if validationErr != nil {
-				log.WithError(validationErr).WithField("tenant id", tenantUUID).Info("resource/host_assignments: queryHostTenantMappings() Error validating tenant Id")
+				slog.WithError(validationErr).WithField("tenant id", tenantUUID).Info("resource/host_assignments: queryHostTenantMappings() Error validating tenant Id query param")
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}
@@ -267,7 +272,7 @@ func queryHostTenantMappings(db repository.SHUBDatabase) errorHandlerFunc {
 		if len(hardwareUUID) != 0 {
 			validationErr := validation.ValidateHardwareUUID(hardwareUUID)
 			if validationErr != nil {
-				log.WithError(validationErr).WithField("hardware uuid", hardwareUUID).Info("resource/host_assignments: queryHostTenantMappings() Error validating hardware uuid")
+				slog.WithError(validationErr).WithField("hardware uuid", hardwareUUID).Info("resource/host_assignments: queryHostTenantMappings() Error validating hardware uuid query param")
 				return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 			}
 		}
@@ -310,7 +315,7 @@ func deleteTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 		id := mux.Vars(r)["id"]
 		validationErr := validation.ValidateUUIDv4(id)
 		if validationErr != nil {
-			log.WithError(validationErr).WithField("id", id).Info("resource/host_assignments: deleteTenantMapping() Error validating host tenant mapping Id")
+			slog.WithError(validationErr).WithField("id", id).Info("resource/host_assignments: deleteTenantMapping() Error validating host tenant mapping Id")
 			return &resourceError{Message: validationErr.Error(), StatusCode: http.StatusBadRequest}
 		}
 
