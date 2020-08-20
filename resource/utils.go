@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2020 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
 package resource
@@ -7,8 +7,8 @@ package resource
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"intel/isecl/lib/clients/v2"
-	"intel/isecl/lib/clients/v2/aas"
+	"intel/isecl/lib/clients/v3"
+	"intel/isecl/lib/clients/v3/aas"
 	"intel/isecl/shub/config"
 	"intel/isecl/shub/constants"
 	"io"

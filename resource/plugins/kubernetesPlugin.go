@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2020 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -13,8 +13,8 @@ import (
 	"encoding/pem"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/pkcs12"
-	clog "intel/isecl/lib/common/v2/log"
-	commLogMsg "intel/isecl/lib/common/v2/log/message"
+	clog "intel/isecl/lib/common/v3/log"
+	commLogMsg "intel/isecl/lib/common/v3/log/message"
 	"intel/isecl/shub/constants"
 	"intel/isecl/shub/types"
 	"io/ioutil"
