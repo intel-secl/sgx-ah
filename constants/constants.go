@@ -32,9 +32,6 @@ const (
 	DefaultIdleTimeout               = 10 * time.Second
 	DefaultMaxHeaderBytes            = 1 << 20
 	DefaultLogEntryMaxLength         = 300
-	DefaultAuthDefendMaxAttempts     = 5
-	DefaultAuthDefendIntervalMins    = 5
-	DefaultAuthDefendLockoutMins     = 15
 	DefaultSSLCertFilePath           = ConfigDir + "shub-dbcert.pem"
 	ServiceName                      = "SHUB"
 	TenantManagerGroupName           = "TenantManager"
