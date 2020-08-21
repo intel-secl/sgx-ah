@@ -84,6 +84,8 @@ func createOrUpdateMapping(db repository.SHUBDatabase, input HostTenantMappingRe
 			TenantUUID:       input.TenantId,
 			HostHardwareUUID: huuId,
 		}
+
+		// Retrieve mapping by filter criteria, update the same if it exists else create a new mapping
 		existingMap, err := db.HostTenantMappingRepository().Retrieve(filter)
 		if existingMap != nil && err == nil {
 			log.Debugf("Mapping between tenant %s and host hardware uuid %s already exists", existingMap.TenantUUID, existingMap.HostHardwareUUID)
@@ -104,7 +106,6 @@ func createOrUpdateMapping(db repository.SHUBDatabase, input HostTenantMappingRe
 			} else {
 				log.Debugf("Mapping %s is still active. Not creating a new entry", existingMap.Id)
 			}
-			//uniqueHuuIdList = append(uniqueHuuIdList[:index], uniqueHuuIdList[index+1:]...)
 			mapping := TenantHostMapping{
 				MappingId:    existingMap.Id,
 				TenantId:     input.TenantId,
@@ -282,6 +283,7 @@ func queryHostTenantMappings(db repository.SHUBDatabase) errorHandlerFunc {
 			HostHardwareUUID: hardwareUUID,
 		}
 
+		// Retrieve mappings based on the filter criteria
 		mappings, err := db.HostTenantMappingRepository().RetrieveAll(filter)
 		if len(mappings) == 0 || err != nil {
 			log.WithError(err).Info("resource/host_assignments: queryHostTenantMappings() Mappings do not exist")
@@ -332,6 +334,7 @@ func deleteTenantMapping(db repository.SHUBDatabase) errorHandlerFunc {
 			return nil
 		}
 
+		// Instead of deleting the mapping from the DB, update deleted field to true
 		tenantMappingInput := types.HostTenantMapping{
 			Id:               tenantMapping.Id,
 			HostHardwareUUID: tenantMapping.HostHardwareUUID,

@@ -63,10 +63,9 @@ type HostAttributesSpec struct {
 }
 
 func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) error {
-	log.Trace("resource/plugin kubernetesPlugin:Pushdata() entering")
-	defer log.Trace("resource/plugin kubernetesPlugin:Pushdata() Leaving")
+	log.Trace("resource/plugins/kubernetesPlugin: Pushdata() entering")
+	defer log.Trace("resource/plugins/kubernetesPlugin: Pushdata() Leaving")
 
-	////TODO: validate
 	var hostSpecArr []HostAttributesSpec
 	for _, p1 := range pData.Host_details {
 
@@ -79,7 +78,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		var e PlatformData
 		err := json.Unmarshal(([]byte(p1.Trust_report)), &e)
 		if err != nil {
-			return errors.Wrap(err, "configuration Unmarshal Failed")
+			return errors.Wrap(err, "Pushdata: configuration Unmarshal Failed")
 		}
 		spec.Sgx_enabled = e.Sgx_enabled
 		spec.Sgx_supported = e.Sgx_supported
@@ -101,7 +100,7 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 	var arr1 []HostAttributesCRD
 	arr1 = append(arr1, crdData)
 	var k8s_url, clientPass, serverKeystore, clientKeystore string
-	//var serverPass string ///TODO: Currently not being used as truststore is not being parsed
+
 	for _, ss := range arr1 {
 		log.Debug("hostAttributes: ", ss)
 		///Each CRD push data
@@ -111,24 +110,20 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		for _, property := range plugin.Properties {
 			if property.Key == "api.endpoint" {
 				value = property.Value
-			} else if property.Key == "kubernetes.client.keystore.password" { ///TODO: This all will go in constants.go once we merge all code
+			} else if property.Key == constants.KubernetesClientKeystorePassword {
 				clientPass = property.Value
-			} else if property.Key == "kubernetes.server.keystore.password" {
-				//serverPass = property.Value ///TODO: Not able to parse server trustore.
-			} else if property.Key == "kubernetes.client.keystore" {
+			} else if property.Key == constants.KubernetesClientKeystore {
 				clientKeystore = property.Value
-			} else if property.Key == "kubernetes.server.keystore" {
+			} else if property.Key == constants.KubernetesServerKeystore {
 				serverKeystore = property.Value
 			}
 		}
-
 		//https: //<k8s-master-IP>:6443/apis/crd.isecl.intel.com/v1beta1/namespaces/default/hostattributes/<tenant-id>-isecl-attributes-object
 		k8s_url = value + constants.PATH + constants.SLASH + constants.URL_HOSTATTRIBUTES + constants.SLASH + tenantId + "-isecl-attributes-object"
 	}
 	CaCert, err := ioutil.ReadFile(serverKeystore)
 	if err != nil {
-		log.WithError(err).Info("error came in reading CaCert")
-		return errors.Wrap(err, "Can't read CaCert")
+		return errors.Wrap(err, "Pushdata: Can't read CaCert")
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -136,25 +131,24 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 
 	encryptedCert, err := ioutil.ReadFile(clientKeystore)
 	if err != nil {
-		log.WithError(err).Info("error came in reading client cetificate")
-		return errors.Wrap(err, "Can't read clientCerificate")
+		return errors.Wrap(err, "Pushdata: Can't read client certificate")
 	}
 	key, cert, err := pkcs12.Decode(encryptedCert, clientPass)
 	if err != nil {
 		slog.WithError(err).Error(commLogMsg.InvalidInputBadEncoding)
-		return errors.Wrap(err, "Can't decode clientCerificate")
+		return errors.Wrap(err, "Pushdata: Can't decode client certificate")
 	}
 	value, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		log.WithError(err).Info("error came in x509.MarshalPKCS8PrivateKey")
-		return errors.Wrap(err, "Can't marshal key")
+		log.WithError(err).Info("Pushdata: error came in x509.MarshalPKCS8PrivateKey")
+		return errors.Wrap(err, "Pushdata: Can't marshal private key")
 	}
 	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: value})
 	clientCert, err := tls.X509KeyPair(pemCert, pemKey)
 	if err != nil {
-		log.WithError(err).Info("error came in tls.X509KeyPair")
-		return errors.Wrap(err, "can't create keyPair")
+		log.WithError(err).Info("Pushdata: error came in tls.X509KeyPair")
+		return errors.Wrap(err, "Pushdata: can't create keyPair")
 	}
 
 	client := &http.Client{
@@ -167,65 +161,62 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 	}
 	url, err := url.Parse(k8s_url)
 	if err != nil {
-		return errors.Wrap(err, "URL parsing failed")
+		return errors.Wrap(err, "Pushdata: URL parsing failed")
 	}
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
-		return errors.Wrap(err, "http NewRequest failed")
+		return errors.Wrap(err, "Pushdata: http NewRequest failed")
 	}
 	r, err := client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "client.Do failed")
+		return errors.Wrap(err, "Pushdata: GET client call failed")
 	}
 
-	if err != nil {
-		return errors.Wrap(err, "GET Call failed")
-	}
 	// Read the response body
 	defer r.Body.Close()
 
 	if r.StatusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			return errors.Wrap(err, "error came in ioutil.ReadAll")
+			return errors.Wrap(err, "Pushdata: error while reading response body")
 		}
 		var hCRD HostAttributesCRD
 		err = json.Unmarshal(body, &hCRD)
 		if err != nil {
-			return errors.Wrap(err, "error came in unmarshalling")
+			return errors.Wrap(err, "Pushdata: error while unmarshalling the data")
 		}
 		///Get MetaData from this
 		crdData.Metadata.ResourceVersion = hCRD.Metadata.ResourceVersion
 
 		reqBytes, err := json.Marshal(crdData)
 		if err != nil {
-			return errors.Wrap(err, "error came in Marshalling CRDData")
+			return errors.Wrap(err, "Pushdata: error came in Marshalling CRDData")
 		}
 
 		req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewBuffer(reqBytes))
 		if err != nil {
-			return errors.Wrap(err, "PUT call failed here")
+			return errors.Wrap(err, "Pushdata: Error creating new request")
 		}
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := client.Do(req)
 		if err != nil {
-			return errors.Wrap(err, "PushSGXData: Error while caching Host Status Information: "+err.Error())
+			return errors.Wrap(err, "Pushdata: PUT client call failed: "+err.Error())
 		}
 		log.Debug("PUT response status: ", resp.StatusCode)
 		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil || resp.StatusCode != http.StatusOK {
-			return errors.Wrap(err, "PUT call ioutil.ReadAll failed")
+			return errors.Wrap(err, "Pushdata: PUT error while reading response body")
 		}
 		resp.Body.Close()
 	} else if r.StatusCode == http.StatusNotFound {
 		reqBytes, err := json.Marshal(crdData)
 		if err != nil {
-			return errors.Wrap(err, "error came in Marshalling crdData")
+			return errors.Wrap(err, "Pushdata: error came in Marshalling crdData")
 		}
 		req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(reqBytes))
 		if err != nil {
-			return errors.Wrap(err, "POST call failed here")
+			return errors.Wrap(err, "Pushdata: POST error while creating new request")
 		}
 		req.Header.Set("Content-Type", "application/json")
 
@@ -233,20 +224,13 @@ func (e *Kubernetes) Pushdata(pData types.PublishData, plugin types.Plugin) erro
 		if err != nil {
 			return errors.Wrap(err, "PushSGXData: Error while caching Host Status Information: "+err.Error())
 		}
-		log.Debug("POST response status: ", resp.StatusCode)
+		log.Debug("Pushdata: POST response status: ", resp.StatusCode)
 		_, err = ioutil.ReadAll(resp.Body)
 		if err != nil || resp.StatusCode != http.StatusCreated {
-			return errors.Wrap(err, "POST call ioutil.ReadAll failed")
+			return errors.Wrap(err, "Pushdata: POST error while reading response body")
 		}
 		resp.Body.Close()
 	}
 	r.Body.Close()
 	return nil
-}
-
-func validateAndSend(plugin types.Plugin) {
-	log.Info("validateAndSend entering")
-	///We will validate later
-	///	generateCrd(data)
-
 }

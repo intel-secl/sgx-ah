@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -114,7 +115,7 @@ func getApi(requestType string, url string) (*http.Response, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Wrapf(err, "resource/utils: getApi() Invalid status code received:%d", resp.StatusCode)
+		return nil, errors.New("resource/utils: getApi() Invalid status code received" + strconv.Itoa(resp.StatusCode))
 	}
 	return resp, nil
 }

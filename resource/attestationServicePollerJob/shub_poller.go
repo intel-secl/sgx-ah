@@ -35,7 +35,7 @@ func Execute(shubDB repository.SHUBDatabase) error {
 		}
 	} else {
 		currentTime := time.Now()
-		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() current time is: --------------------------", time.Now())
+		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() current time is: ", time.Now())
 
 		lastDateTimeFromLastRunFile, err := ioutil.ReadFile(lastRunDateTimeFileName)
 		if err != nil {
@@ -43,13 +43,13 @@ func Execute(shubDB repository.SHUBDatabase) error {
 		}
 
 		t, err := time.Parse("Mon Jan 2 15:04:05 MST 2006", string(lastDateTimeFromLastRunFile))
-		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() time read from file is: ------------------------------------", t)
+		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() time read from file is: ", t)
 		if err != nil {
 			return errors.Wrapf(err, "resource/attestationServicePollerJob/shub_poller: Execute() error in parsing timestamp present in file %s", lastRunDateTimeFileName)
 		}
 
 		timeDifferenceInMinutes := currentTime.Sub(t)
-		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() difference in current time and time read from file is: ---------------------------", timeDifferenceInMinutes)
+		log.Info("resource/attestationServicePollerJob/shub_poller: Execute() difference in current time and time read from file is: ", timeDifferenceInMinutes)
 
 		// Since int returns time in nanoseconds, need to divide it by 6e+10 to convert it into minutes
 		timeDifferenceInt := int(timeDifferenceInMinutes) / (6e+10)

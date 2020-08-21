@@ -161,12 +161,12 @@ func (a *App) executablePath() string {
 	if a.ExecutablePath != "" {
 		return a.ExecutablePath
 	}
-	exec, err := os.Executable()
+	executable, err := os.Executable()
 	if err != nil {
 		// if we can't find self-executable path, we're probably in a state that is panic() worthy
 		panic(err)
 	}
-	return exec
+	return executable
 }
 
 func (a *App) homeDir() string {
@@ -393,7 +393,6 @@ func (a *App) Run(args []string) error {
 		}
 
 		//Change the file ownership to shub user
-
 		err = cos.ChownR(constants.ConfigDir, uid, gid)
 		if err != nil {
 			return errors.Wrap(err, "Error while changing file ownership")
@@ -649,7 +648,7 @@ func validateSetupArgs(cmd string, args []string) error {
 
 		err := fs.Parse(args)
 		if err != nil {
-			return fmt.Errorf("Fail to parse arguments: %s", err.Error())
+			return fmt.Errorf("fail to parse arguments: %s", err.Error())
 		}
 		return validateCmdAndEnv(env_names_cmd_opts, fs)
 
@@ -663,11 +662,11 @@ func validateSetupArgs(cmd string, args []string) error {
 		}
 
 		fs = flag.NewFlagSet("tls", flag.ContinueOnError)
-		fs.String("host_names", "", "comma separated list of hostnames to add to TLS self signed cert")
+		fs.String("host_names", "", "comma separated list of host names to add to TLS self signed cert")
 
 		err := fs.Parse(args)
 		if err != nil {
-			return fmt.Errorf("Fail to parse arguments: %s", err.Error())
+			return fmt.Errorf("fail to parse arguments: %s", err.Error())
 		}
 		return validateCmdAndEnv(env_names_cmd_opts, fs)
 
@@ -751,13 +750,13 @@ func fnGetJwtCerts() error {
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "server:fnGetJwtCerts() Could not retrieve jwt certificate")
+		return errors.Wrap(err, "fnGetJwtCerts: Could not retrieve jwt certificate")
 	}
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	err = crypt.SavePemCertWithShortSha1FileName(body, constants.TrustedJWTSigningCertsDir)
 	if err != nil {
-		return errors.Wrap(err, "server:fnGetJwtCerts() Could not store Certificate")
+		return errors.Wrap(err, "fnGetJwtCerts: Could not store Certificate")
 	}
 	return nil
 }

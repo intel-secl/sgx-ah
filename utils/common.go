@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 var log = clog.GetDefaultLogger()
@@ -72,6 +73,8 @@ type endpoints struct {
 }
 
 func CreateToken(token AuthToken, tokenUrl string) (TokenResponse, error) {
+	log.Trace("utils/common: CreateToken() Entering")
+	defer log.Trace("utils/common: CreateToken() Leaving")
 
 	url, err := url.Parse(tokenUrl)
 	if err != nil {
@@ -85,34 +88,33 @@ func CreateToken(token AuthToken, tokenUrl string) (TokenResponse, error) {
 	}
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(reqBytes))
 	if err != nil {
-		return TokenResponse{}, errors.Wrap(err, "POST call failed here")
+		return TokenResponse{}, errors.Wrap(err, "POST call failed")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return TokenResponse{}, errors.Wrap(err, "PushSGXData: Error while caching Host Status Information: "+err.Error())
+		return TokenResponse{}, errors.Wrap(err, "CreateToken: Client call failed: "+err.Error())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		log.Error("expected status not retuned")
-		return TokenResponse{}, errors.New("PushSGXData: Error while getting token")
+		return TokenResponse{}, errors.New("CreateToken: Invalid status code received" + strconv.Itoa(resp.StatusCode))
 	}
 	tokenHeader := resp.Header.Get(constants.KEYSTONE_AUTH_TOKEN_HEADER_KEY)
 	if tokenHeader == "" {
-		return TokenResponse{}, errors.New("PushSGXData: token header not found")
+		return TokenResponse{}, errors.New("CreateToken: token header not found")
 	}
 	log.Info("tokenHeader: ", tokenHeader)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return TokenResponse{}, errors.Wrap(err, "error came in ioutil.ReadAll")
+		return TokenResponse{}, errors.Wrap(err, "CreateToken: error while reading response body")
 	}
 	var tResp TokenResponse
 	err = json.Unmarshal(body, &tResp)
 	if err != nil {
-		return TokenResponse{}, errors.Wrap(err, "error came in unmarshalling of token body")
+		return TokenResponse{}, errors.Wrap(err, "CreateToken: error while unmarshalling token body")
 	}
 	var t1 TokenResponse
 	t1.Token = tResp.Token
@@ -121,6 +123,9 @@ func CreateToken(token AuthToken, tokenUrl string) (TokenResponse, error) {
 }
 
 func GetEndPointUrl(v1 TokenResponse, typeVar string) string {
+	log.Trace("utils/common: GetEndPointUrl() Entering")
+	defer log.Trace("utils/common: GetEndPointUrl() Leaving")
+
 	var url1 string
 	if v1.Token.Catalog != nil {
 		for _, c1 := range v1.Token.Catalog {

@@ -59,7 +59,6 @@ func SHUBSchedulerJob(db repository.SHUBDatabase) error {
 
 	err = resource.SynchAttestationInfo(db)
 	if err != nil {
-		log.Info("got error")
 		log.Error("scheduler/shub_scheduler: SHUBSchedulerJob() Error while pushing data to the tenant")
 	}
 	return nil

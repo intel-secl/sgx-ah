@@ -2,6 +2,7 @@
  * Copyright (C) 2020 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
 package types
 
 type HostDetails struct {
@@ -26,12 +27,3 @@ type Plugin struct {
 	Name       string     `json:"name,omitempty"`
 	Properties []Property `json:"properties,omitempty"`
 }
-
-/*
-type hostDetails struct {
-	uuid                string
-	hardwareUuid        string
-	trust_report        string
-	hostname            string
-	signed_trust_report string
-}*/

@@ -65,14 +65,6 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	log.Trace("resource/plugin OpenStackPlugin Pushdata() entering")
 	defer log.Trace("resource/plugin OpenStackPlugin:Pushdata() Leaving")
 
-	/*        NovaRsClient novaRsClient = NovaRsClientBuilder.build(plugin);
-			1) get all plugin properies
-			2) Calls  with this information to PlacementClient ->validates keystonePublicEndpoint, Calls initIdentityService -> cretaes a token used to contact OpenStack(File AbstractIdentityService.java)
-		3)call to sendDataToEndpoint() -> NovaRsClient.java
-	4) Creates Traits and send them
-
-	*/
-
 	if len(plugin.Properties) == 0 {
 		log.Error("No configuration provided ")
 		errors.New("plugin properties missing")
@@ -81,7 +73,6 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 	var pluginAuthEndpoint, domainName, password, userName, tenantName string
 
 	for _, property := range plugin.Properties {
-		///TODO: Turn this into swtich case
 		if property.Key == "auth.endpoint" {
 			pluginAuthEndpoint = property.Value
 		} else if property.Key == "domain.name" {
@@ -98,7 +89,7 @@ func (e *OpenStack) Pushdata(pData types.PublishData, plugin types.Plugin) error
 		log.Error("Configuration not provided")
 		return errors.New("configurations missing")
 	}
-	///Now use above information to cretae  a token and send to OpenStack
+	///Now use above information to create a token and send to OpenStack
 	err := validateUrl(pluginAuthEndpoint, "AUTH")
 	if err != nil {
 		log.WithError(err).Info("URL parsing failed")

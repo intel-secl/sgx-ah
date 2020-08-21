@@ -186,6 +186,7 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
 		}
 
+		// Extract and remove the credentials from the input
 		pluginCredentialsMap := extractCredentialFromTenant(tenant)
 		removeCredentialFromTenant(tenant)
 
@@ -194,6 +195,8 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			log.WithError(err).Info("resource/tenants:registerTenant() failed to marshal tenant data to JSON")
 			return errors.New("resource/tenants:registerTenant() failed to marshal tenant data to JSON")
 		}
+
+		// after removing the credentials, store rest of the json key value pairs in config
 		tenantStr := string(tenantJSON)
 		tenantId := uuid.New().String()
 		tenantInput := types.Tenant{
@@ -204,11 +207,14 @@ func registerTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			UpdatedTime: time.Now(),
 			Deleted:     false,
 		}
+
+		// create tenant
 		created, err := db.TenantRepository().Create(tenantInput)
 		if err != nil {
 			return errors.New("resource/tenants:registerTenant() Error while caching tenant information")
 		}
 
+		// store extracted tenant credentials in another table
 		err = createTenantPluginCredential(db, created, pluginCredentialsMap)
 		if err != nil {
 			return err
@@ -306,6 +312,8 @@ func queryTenants(db repository.SHUBDatabase) errorHandlerFunc {
 		filter := types.Tenant{
 			TenantName: tenantName,
 		}
+
+		// Retrieve tenants based on query parameter, if not provided, retrieve all the tenants
 		allTenants, err := db.TenantRepository().RetrieveAll(filter)
 		if len(allTenants) == 0 || err != nil {
 			log.WithError(err).Info("resource/tenants: queryTenants() Tenants do not exist")
@@ -392,6 +400,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: validateResult, StatusCode: http.StatusBadRequest}
 		}
 
+		// Extract and remove tenant plugin credentials from the input
 		pluginCredentialsMap := extractCredentialFromTenant(tenant)
 		removeCredentialFromTenant(tenant)
 
@@ -401,6 +410,7 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return errors.New("resource/tenants:updateTenant() failed to marshal tenant data to JSON")
 		}
 
+		// after removing the credentials from input, store rest of the json key-value pairs as config
 		tenantStr := string(tenantJSON)
 		tenantInput := types.Tenant{
 			Id:          id,
@@ -410,17 +420,21 @@ func updateTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			UpdatedTime: time.Now(),
 			Deleted:     false,
 		}
+
+		// update the tenant properties based on input
 		updatedTenant, err := db.TenantRepository().Update(tenantInput)
 		if err != nil {
 			log.WithError(err).Error("resource/tenants: updateTenant() Error while updating tenant information")
 			return &resourceError{Message: "cannot complete request", StatusCode: http.StatusInternalServerError}
 		}
 
+		// remove the old credentials from tenant_plugin_credentials table
 		err = deleteTenantPluginCredential(db, updatedTenant)
 		if err != nil {
 			return err
 		}
 
+		// store new credentials in tenant_plugin_credentials table
 		err = createTenantPluginCredential(db, updatedTenant, pluginCredentialsMap)
 		if err != nil {
 			return err
@@ -469,6 +483,7 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return nil
 		}
 
+		// Instead of removing the tenant record, mark tenant as deleted in DB
 		tenantInput := types.Tenant{
 			Id:          tenant.Id,
 			TenantName:  tenant.TenantName,
@@ -483,6 +498,7 @@ func deleteTenant(db repository.SHUBDatabase) errorHandlerFunc {
 			return &resourceError{Message: err.Error(), StatusCode: http.StatusInternalServerError}
 		}
 
+		// Retrieve the corresponding tenant mapping and mark it also as deleted
 		mappings, err := db.HostTenantMappingRepository().RetrieveAll(types.HostTenantMapping{TenantUUID: tenant.Id})
 		if len(mappings) == 0 || err != nil {
 			log.WithError(err).Info("resource/tenants: deleteTenant() Cannot retrieve mappings of the corresponding tenant")

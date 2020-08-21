@@ -6,7 +6,7 @@
 
 echo "Setting up SHUB Related roles and user in AAS Database"
 
-#Get the value of AAS IP address and port. Default vlue is also provided.
+#Get the value of AAS IP address and port. Default value is also provided.
 aas_hostname=${AAS_URL:-"https://10.80.245.104:8444"}
 CURL_OPTS="-s -k"
 IPADDR="10.80.245.104"
@@ -27,7 +27,6 @@ curl_output=`curl $CURL_OPTS -X POST -H "Content-Type: application/json" -H "Acc
 
 Bearer_token=`echo $curl_output | rev | cut -c 4- | rev`
 response_status=`echo "${curl_output: -3}"`
-#shub config aasAdmin.bearer.token $Bearer_token >/dev/null
 
 if rpm -q jq; then
 	echo "JQ package installed"
@@ -36,7 +35,7 @@ else
 	exit 2
 fi
 
-#Create shubUser also get user id
+#Create SHUB User
 create_shub_user() {
 cat > $tmpdir/user.json << EOF
 {
@@ -66,7 +65,6 @@ fi
 }
 
 #Add SHUB roles
-#cms role(shub will create these roles where CN=SHUB), getroles(api in aas that is to be map with), keyTransfer, keyCrud
 create_user_roles() {
 
 cat > $tmpdir/roles.json << EOF
@@ -104,7 +102,7 @@ create_roles()
 	echo $ROLE_ID_TO_MAP
 }
 
-#Map shubUser to Roles
+#Map SHUB User to Roles
 mapUser_to_role() {
 cat >$tmpdir/mapRoles.json <<EOF
 {
@@ -138,7 +136,7 @@ if [ $status -eq 0 ]; then
     echo "SHUB Setup for AAS-CMS complete: No errors"
 fi
 if [ $status -eq 2 ]; then
-    echo "SHUB Setup for AAS-CMS already exists in AAS Database: No action will be done"
+    echo "SHUB Setup for AAS-CMS already exists in AAS Database: No action will be taken"
 fi
 
 #Get Token for SHUB USER and configure it in shub config.
@@ -146,12 +144,10 @@ curl $CURL_OPTS -X POST -H "Content-Type: application/json" -H "Accept: applicat
 
 status=$(cat $tmpdir/getshubusertoken-response.status)
 if [ $status -ne 200 ]; then
-	#shub config aas.bearer.token $tmpdir/shub_token-response.json
 	echo "Couldn't get bearer token"
 else
 	export BEARER_TOKEN=`cat $tmpdir/shub_token-response.json`
 	echo $BEARER_TOKEN
-	#shub config aas.bearer.token $BEARER_TOKEN >/dev/null
 fi
 
 # cleanup

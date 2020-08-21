@@ -41,6 +41,7 @@ func FetchAllHostsFromHVS(shubDB repository.SHUBDatabase) error {
 		return errors.New("resource/shub_push_pull_data: FetchAllHostsFromHVS() Failed to Load configuration")
 	}
 
+	// Retrieve all the hosts from SHVS
 	getSHVSUrl := conf.ShvsBaseUrl + "hosts"
 	SHVSUrl, parseErr := url.Parse(getSHVSUrl)
 	if parseErr != nil {
@@ -66,6 +67,7 @@ func FetchAllHostsFromHVS(shubDB repository.SHUBDatabase) error {
 		return errors.New("resource/shub_push_pull_data: FetchAllHostsFromHVS() No hosts have been retrieved from HVS")
 	}
 
+	// Retrieve platform data for all the hosts from SHVS
 	for i := 0; i < numberOfHosts; i++ {
 		url := conf.ShvsBaseUrl + "platform-data?HostName=" + hvsResponse[i].HostName
 		response, err := getApi("GET", url)
@@ -89,6 +91,7 @@ func FetchAllHostsFromHVS(shubDB repository.SHUBDatabase) error {
 			continue
 		}
 
+		// Retrieve host by hardware UUID from SHUB DB, if host exists, update the existing data else create a new record in database
 		hostByHUUID, _ := shubDB.HostRepository().Retrieve(types.Host{HardwareUUID: hvsResponse[i].HardwareUUID})
 		if hostByHUUID != nil {
 			host := types.Host{
