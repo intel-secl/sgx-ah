@@ -15,7 +15,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -63,8 +62,6 @@ type Configuration struct {
 	IdleTimeout       time.Duration
 	MaxHeaderBytes    int
 }
-
-var mu sync.Mutex
 
 var global *Configuration
 
