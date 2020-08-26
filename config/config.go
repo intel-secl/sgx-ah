@@ -46,7 +46,7 @@ type Configuration struct {
 		IncludeKid        bool
 		TokenDurationMins int
 	}
-	CMSBaseUrl string
+	CMSBaseUrl     string
 	AuthServiceUrl string
 	ShvsBaseUrl    string
 	SchedulerTimer int
@@ -206,7 +206,7 @@ func (conf *Configuration) SaveConfiguration(c setup.Context) error {
 		conf.SchedulerTimer = constants.DefaultSHUBSchedulerTimer
 	}
 
-        return conf.Save()
+	return conf.Save()
 }
 
 func Load(path string) *Configuration {
