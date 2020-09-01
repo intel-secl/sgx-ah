@@ -1,36 +1,36 @@
 package docs
 
-import  (
+import (
 	"intel/isecl/shub/resource"
-        "intel/isecl/shub/types"
+	"intel/isecl/shub/types"
 )
 
 // HostTenantMappingRequest request payload
 // swagger:parameters HostTenantMappingRequest
 type HostTenantMappingRequestInfo struct {
-        // in:body
-        Body resource.HostTenantMappingRequest
+	// in:body
+	Body resource.HostTenantMappingRequest
 }
 
 // HostTenantMappingResponse response payload
 // swagger:response HostTenantMappingResponse
 type HostTenantMappingResponseInfo struct {
-        // in:body
-        Body resource.HostTenantMappingResponse
+	// in:body
+	Body resource.HostTenantMappingResponse
 }
 
 // HostTenantMapping response payload
 // swagger:response HostTenantMapping
 type HostTenantMappingInfo struct {
-        // in:body
-        Body types.HostTenantMapping
+	// in:body
+	Body types.HostTenantMapping
 }
 
 // HostTenantMappings response payload
 // swagger:response HostTenantMappings
 type HostTenantMappingsInfo struct {
-        // in:body
-        Body types.HostTenantMappings
+	// in:body
+	Body types.HostTenantMappings
 }
 
 // swagger:operation POST /host-assignments Host-assignment createHostTenantMapping
@@ -90,7 +90,7 @@ type HostTenantMappingsInfo struct {
 // produces:
 //  - application/json
 // parameters:
-// - name: host_hardware_uuid 
+// - name: host_hardware_uuid
 //   description: Hardware UUID of the host.
 //   in: query
 //   type: string
@@ -121,7 +121,6 @@ type HostTenantMappingsInfo struct {
 //  ]
 // ---
 
-
 // swagger:operation DELETE /host-assignments/{id} Host-assignment deleteTenantMapping
 // ---
 // description: |
@@ -146,7 +145,6 @@ type HostTenantMappingsInfo struct {
 // x-sample-call-output: |
 //    204 No content
 // ---
-
 
 // swagger:operation GET /host-assignments/{id} Host-assignment getHostTenantMapping
 // ---

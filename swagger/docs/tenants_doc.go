@@ -3,24 +3,22 @@ package docs
 import "intel/isecl/shub/resource"
 
 type PluginReq struct {
-        PluginName  string             `json:"name"`
-        Plugins     []*resource.Plugin `json:"plugins"`
+	PluginName string             `json:"name"`
+	Plugins    []*resource.Plugin `json:"plugins"`
 }
-
-
 
 // PluginReq request payload
 // swagger:parameters PluginReq
 type PluginReqInfo struct {
-        // in:body
-        Body PluginReq
+	// in:body
+	Body PluginReq
 }
 
 // Tenant resposne payload
 // swagger:response Tenant
 type TenantInfo struct {
-        // in:body
-        Body resource.Tenant
+	// in:body
+	Body resource.Tenant
 }
 
 type Tenants []resource.Tenant
@@ -28,15 +26,15 @@ type Tenants []resource.Tenant
 // Tenants resposne payload
 // swagger:response Tenants
 type TenantsInfo struct {
-        // in:body
-        Body Tenants
+	// in:body
+	Body Tenants
 }
 
 // swagger:operation POST /tenants Tenant registerTenant
 // ---
 //
 // description: |
-//  Registers a tenant. A tenant controls SGX hosts that are managed by an orchestrator that is also under the control of the tenant. 
+//  Registers a tenant. A tenant controls SGX hosts that are managed by an orchestrator that is also under the control of the tenant.
 //  SGX Hub pushes the tenant's hosts SGX data to the tenant's orchestrator.
 //  It is registered by providing tenant configuration along with plugins in the request body.
 //  Supported plugin names are nova and kubernetes in the tenant configuration.
@@ -196,7 +194,6 @@ type TenantsInfo struct {
 //  ]
 // ---
 
-
 // swagger:operation DELETE /tenants/{id} Tenant deleteTenant
 // ---
 // description: |
@@ -221,7 +218,6 @@ type TenantsInfo struct {
 // x-sample-call-output: |
 //    204 No content
 // ---
-
 
 // swagger:operation GET /tenants/{id} Tenant getTenant
 // ---
@@ -283,12 +279,11 @@ type TenantsInfo struct {
 //  }
 // ---
 
-
 // swagger:operation PUT /tenants/{id} Tenant updateTenant
 // ---
 //
 // description: |
-//   Updates a tenant configuration associated with a specified tenant id from the SGX Hub database. 
+//   Updates a tenant configuration associated with a specified tenant id from the SGX Hub database.
 //   A valid bearer token is required to authorize this REST call.
 //
 // security:
